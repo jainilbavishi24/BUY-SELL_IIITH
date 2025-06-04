@@ -1,8 +1,3 @@
-
-
-
-
-
 import React, { useState, useRef } from "react";
 import ReCAPTCHA from "react-google-recaptcha";
 import {
@@ -19,11 +14,10 @@ import {
 } from "@chakra-ui/react";
 import { useNavigate } from "react-router-dom";
 
-
-const LoginPage = ({onLogin}) => {
-  const [formData, setFormData] = useState({ 
-    email: "", 
-    password: ""
+const LoginPage = ({ onLogin }) => {
+  const [formData, setFormData] = useState({
+    email: "",
+    password: "",
   });
   const recaptchaRef = useRef(null);
   const toast = useToast();
@@ -31,11 +25,13 @@ const LoginPage = ({onLogin}) => {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleIIITLogin = () => {
-    const serviceURL = encodeURIComponent('http://localhost:5000/api/auth/cas/callback');
+    const serviceURL = encodeURIComponent(
+      "http://localhost:5000/api/auth/cas/callback"
+    );
     window.location.href = `https://login.iiit.ac.in/cas/login?service=${serviceURL}`;
   };
 
@@ -60,17 +56,17 @@ const LoginPage = ({onLogin}) => {
         body: JSON.stringify({
           email: formData.email,
           password: formData.password,
-          recaptchaToken
+          recaptchaToken,
         }),
       });
       const data = await res.json();
-  
+
       if (data.success && data.user) {
         localStorage.setItem("authToken", data.token);
         localStorage.setItem("userId", data.user._id);
-  
+
         onLogin();
-  
+
         toast({
           title: "Login Successful",
           description: "Welcome back!",
@@ -78,11 +74,11 @@ const LoginPage = ({onLogin}) => {
           duration: 5000,
           isClosable: true,
         });
-  
+
         navigate("/profile");
       } else {
         recaptchaRef.current.reset();
-        
+
         toast({
           title: "Login Failed",
           description: data.message || "An unexpected error occurred.",
@@ -104,26 +100,31 @@ const LoginPage = ({onLogin}) => {
   };
 
   return (
-    <Container 
-      maxW="container.sm" 
-      h="100vh" 
-      display="flex" 
-      alignItems="center" 
+    <Container
+      maxW="container.sm"
+      h="100vh"
+      display="flex"
+      alignItems="center"
       justifyContent="center"
     >
-      <Box 
-        w="100%" 
-        maxW="400px" 
-        p={8} 
-        borderWidth={1} 
-        borderRadius="lg" 
+      <Box
+        w="100%"
+        maxW="400px"
+        p={8}
+        borderWidth={1}
+        borderRadius="lg"
         boxShadow="xl"
       >
         <VStack spacing={6}>
           <Heading textAlign="center">Login</Heading>
-          
+
           <FormControl>
-            <FormLabel>Email <Text as="span" color="red.500">*</Text></FormLabel>
+            <FormLabel>
+              Email{" "}
+              <Text as="span" color="red.500">
+                *
+              </Text>
+            </FormLabel>
             <Input
               name="email"
               value={formData.email}
@@ -133,7 +134,12 @@ const LoginPage = ({onLogin}) => {
           </FormControl>
 
           <FormControl>
-            <FormLabel>Password <Text as="span" color="red.500">*</Text></FormLabel>
+            <FormLabel>
+              Password{" "}
+              <Text as="span" color="red.500">
+                *
+              </Text>
+            </FormLabel>
             <Input
               name="password"
               type="password"
@@ -145,24 +151,14 @@ const LoginPage = ({onLogin}) => {
 
           <ReCAPTCHA
             ref={recaptchaRef}
-            sitekey="6LfE4cMqAAAAAHh124xngI4Qs-MBoRlgYifmuGDH"
-            
+            sitekey="6Ldf0VUrAAAAANHrMo1x4VlymE_hCLCkk2kXmICV"
           />
 
-          <Button 
-            colorScheme="teal" 
-            onClick={handleLogin} 
-            w="full"
-          >
+          <Button colorScheme="teal" onClick={handleLogin} w="full">
             Log In
           </Button>
 
-
-          <Button 
-            colorScheme="green" 
-            w="full" 
-            onClick={handleIIITLogin}
-          >
+          <Button colorScheme="green" w="full" onClick={handleIIITLogin}>
             IIIT Login
           </Button>
 
@@ -183,7 +179,5 @@ const LoginPage = ({onLogin}) => {
 };
 
 export default LoginPage;
-
-
 
 //

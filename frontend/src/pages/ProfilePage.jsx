@@ -28,8 +28,6 @@ const ProfilePage = () => {
   const toast = useToast();
   const userId = localStorage.getItem("userId");
 
-
-
   useEffect(() => {
     const fetchProfile = async () => {
       try {
@@ -48,7 +46,6 @@ const ProfilePage = () => {
             contactNo: data.user.contactNo,
             password: "",
           });
-
         }
 
         const reviewsRes = await fetch(`/api/user/${userId}/seller-reviews`, {
@@ -79,8 +76,6 @@ const ProfilePage = () => {
   };
 
   const handleUpdate = async () => {
-
-
     try {
       const res = await fetch(`/api/user/${userId}/profile`, {
         method: "PUT",
@@ -112,9 +107,7 @@ const ProfilePage = () => {
     }
   };
 
-
-
-return (
+  return (
     <Container maxW="container.md" py={12}>
       <VStack spacing={6}>
         <Heading>Profile Page</Heading>
@@ -128,15 +121,29 @@ return (
         </FormControl>
         <FormControl>
           <FormLabel>Age</FormLabel>
-          <Input name="age" type="number" value={userData.age} onChange={handleChange} />
+          <Input
+            name="age"
+            type="number"
+            value={userData.age}
+            onChange={handleChange}
+          />
         </FormControl>
         <FormControl>
           <FormLabel>Contact Number</FormLabel>
-          <Input name="contactNo" value={userData.contactNo} onChange={handleChange} />
+          <Input
+            name="contactNo"
+            value={userData.contactNo}
+            onChange={handleChange}
+          />
         </FormControl>
         <FormControl>
           <FormLabel>Password</FormLabel>
-          <Input name="password" type="password" value={userData.password} onChange={handleChange} />
+          <Input
+            name="password"
+            type="password"
+            value={userData.password}
+            onChange={handleChange}
+          />
         </FormControl>
         <Button colorScheme="teal" onClick={handleUpdate}>
           Update Profile
@@ -144,7 +151,9 @@ return (
       </VStack>
       {sellerReviews.length > 0 && (
         <Box mt={8}>
-          <Heading size="md" mb={4}>Seller Reviews</Heading>
+          <Heading size="md" mb={4}>
+            Seller Reviews
+          </Heading>
           <VStack spacing={4} align="stretch">
             {sellerReviews.map((review, index) => (
               <Box key={index} p={4} borderWidth={1} borderRadius="md">
@@ -153,7 +162,7 @@ return (
                     <Icon
                       key={i}
                       as={StarIcon}
-                      color={i < review.rating ? 'yellow.400' : 'gray.200'}
+                      color={i < review.rating ? "yellow.400" : "gray.200"}
                     />
                   ))}
                 </HStack>
