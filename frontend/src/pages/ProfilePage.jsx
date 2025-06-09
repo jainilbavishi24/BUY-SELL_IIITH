@@ -12,18 +12,23 @@ import {
   Heading,
   VStack,
   useToast,
+  Divider,
+  Badge,
+  useColorModeValue,
 } from "@chakra-ui/react";
 import { StarIcon } from "@chakra-ui/icons";
+import { FaKey, FaUser, FaPhone, FaEnvelope } from "react-icons/fa";
+import ChangePassword from "../components/ChangePassword";
 
 const ProfilePage = () => {
   const [userData, setUserData] = useState({
-    firstName: "",
-    lastName: "",
+    fname: "",
+    lname: "",
     email: "",
     age: "",
-    contactNumber: "",
+    contactNo: "",
   });
-  const [isEditing, setIsEditing] = useState(false);
+  const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
   const [sellerReviews, setSellerReviews] = useState([]);
   const toast = useToast();
   const userId = localStorage.getItem("userId");
@@ -40,11 +45,11 @@ const ProfilePage = () => {
         const data = await res.json();
         if (data.success) {
           setUserData({
-            fname: data.user.fname,
-            lname: data.user.lname,
-            age: data.user.age,
-            contactNo: data.user.contactNo,
-            password: "",
+            fname: data.user.fname || "",
+            lname: data.user.lname || "",
+            email: data.user.email || "",
+            age: data.user.age || "",
+            contactNo: data.user.contactNo || "",
           });
         }
 
@@ -109,45 +114,119 @@ const ProfilePage = () => {
 
   return (
     <Container maxW="container.md" py={12}>
-      <VStack spacing={6}>
-        <Heading>Profile Page</Heading>
-        <FormControl>
-          <FormLabel>First Name</FormLabel>
-          <Input name="fname" value={userData.fname} onChange={handleChange} />
-        </FormControl>
-        <FormControl>
-          <FormLabel>Last Name</FormLabel>
-          <Input name="lname" value={userData.lname} onChange={handleChange} />
-        </FormControl>
-        <FormControl>
-          <FormLabel>Age</FormLabel>
-          <Input
-            name="age"
-            type="number"
-            value={userData.age}
-            onChange={handleChange}
-          />
-        </FormControl>
-        <FormControl>
-          <FormLabel>Contact Number</FormLabel>
-          <Input
-            name="contactNo"
-            value={userData.contactNo}
-            onChange={handleChange}
-          />
-        </FormControl>
-        <FormControl>
-          <FormLabel>Password</FormLabel>
-          <Input
-            name="password"
-            type="password"
-            value={userData.password}
-            onChange={handleChange}
-          />
-        </FormControl>
-        <Button colorScheme="teal" onClick={handleUpdate}>
-          Update Profile
-        </Button>
+      <VStack spacing={8}>
+        <VStack spacing={2}>
+          <Heading size="lg" color={useColorModeValue("gray.800", "white")}>
+            Profile Settings
+          </Heading>
+          <Text color={useColorModeValue("gray.600", "gray.400")}>
+            Manage your account information and security
+          </Text>
+        </VStack>
+
+        {/* Profile Information Section */}
+        <Box
+          w="full"
+          bg={useColorModeValue("white", "gray.800")}
+          p={6}
+          borderRadius="xl"
+          boxShadow="lg"
+          border="1px"
+          borderColor={useColorModeValue("gray.200", "gray.600")}
+        >
+          <VStack spacing={6}>
+            <HStack spacing={3} w="full" justify="flex-start">
+              <Icon as={FaUser} color="blue.500" />
+              <Heading size="md">Personal Information</Heading>
+            </HStack>
+
+            <VStack spacing={4} w="full">
+              <HStack spacing={4} w="full">
+                <FormControl>
+                  <FormLabel>
+                    <HStack spacing={2}>
+                      <Text>First Name</Text>
+                    </HStack>
+                  </FormLabel>
+                  <Input
+                    name="fname"
+                    value={userData.fname}
+                    onChange={handleChange}
+                    variant="filled"
+                  />
+                </FormControl>
+                <FormControl>
+                  <FormLabel>Last Name</FormLabel>
+                  <Input
+                    name="lname"
+                    value={userData.lname}
+                    onChange={handleChange}
+                    variant="filled"
+                  />
+                </FormControl>
+              </HStack>
+
+              <HStack spacing={4} w="full">
+                <FormControl>
+                  <FormLabel>
+                    <HStack spacing={2}>
+                      <Icon as={FaEnvelope} boxSize={3} />
+                      <Text>Email</Text>
+                    </HStack>
+                  </FormLabel>
+                  <Input
+                    name="email"
+                    value={userData.email}
+                    onChange={handleChange}
+                    variant="filled"
+                    isReadOnly
+                    bg={useColorModeValue("gray.100", "gray.700")}
+                  />
+                </FormControl>
+                <FormControl>
+                  <FormLabel>Age</FormLabel>
+                  <Input
+                    name="age"
+                    type="number"
+                    value={userData.age}
+                    onChange={handleChange}
+                    variant="filled"
+                  />
+                </FormControl>
+              </HStack>
+
+              <FormControl>
+                <FormLabel>
+                  <HStack spacing={2}>
+                    <Icon as={FaPhone} boxSize={3} />
+                    <Text>Contact Number</Text>
+                  </HStack>
+                </FormLabel>
+                <Input
+                  name="contactNo"
+                  value={userData.contactNo}
+                  onChange={handleChange}
+                  variant="filled"
+                  placeholder="Enter your phone number for SMS notifications"
+                />
+              </FormControl>
+            </VStack>
+
+            <HStack spacing={4} w="full" justify="flex-end">
+              <Button
+                leftIcon={<Icon as={FaKey} />}
+                variant="outline"
+                colorScheme="orange"
+                onClick={() => setIsChangePasswordOpen(true)}
+              >
+                Change Password
+              </Button>
+              <Button colorScheme="blue" onClick={handleUpdate}>
+                Update Profile
+              </Button>
+            </HStack>
+          </VStack>
+        </Box>
       </VStack>
       {sellerReviews.length > 0 && (
         <Box mt={8}>
@@ -173,6 +252,12 @@ const ProfilePage = () => {
           </VStack>
         </Box>
       )}
+
+      {/* Change Password Modal */}
+      <ChangePassword
+        isOpen={isChangePasswordOpen}
+        onClose={() => setIsChangePasswordOpen(false)}
+      />
     </Container>
   );
 };

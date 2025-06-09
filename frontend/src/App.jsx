@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from "react";
-import { Box, ChakraProvider, extendTheme } from "@chakra-ui/react";
+import { useEffect, useState } from "react";
+import { Box, ChakraProvider } from "@chakra-ui/react";
 import {
   Route,
   Routes,
@@ -7,6 +7,7 @@ import {
   Navigate,
   useLocation,
 } from "react-router-dom";
+import theme from "./theme";
 
 import CreatePage from "./pages/CreatePage";
 import HomePage from "./pages/SearchPage";
@@ -19,48 +20,9 @@ import ProfilePage from "./pages/ProfilePage";
 import ItemPage from "./pages/ItemPage";
 import OrderHistoryPage from "./pages/OrderHistoryPage";
 import DeliverItemsPage from "./pages/DeliverItemsPage";
+import FloatingChatBot from "./components/FloatingChatBot";
 
-const theme = extendTheme({
-  config: {
-    initialColorMode: "light",
-    useSystemColorMode: false,
-  },
-  styles: {
-    global: (props) => ({
-      body: {
-        bg: props.colorMode === "dark" ? "gray.900" : "gray.50",
-        color: props.colorMode === "dark" ? "gray.200" : "gray.800",
-      },
-    }),
-  },
-  components: {
-    Button: {
-      baseStyle: {
-        _hover: {
-          transform: "scale(1.05)",
-          boxShadow: "md",
-        },
-        transition: "all 0.2s ease-in-out",
-      },
-    },
-    Text: {
-      baseStyle: (props) => ({
-        color: props.colorMode === "dark" ? "gray.200" : "gray.800",
-      }),
-    },
-    Heading: {
-      baseStyle: (props) => ({
-        color: props.colorMode === "dark" ? "gray.100" : "gray.800",
-      }),
-    },
-    Box: {
-      baseStyle: (props) => ({
-        bg: props.colorMode === "dark" ? "gray.800" : "white",
-        color: props.colorMode === "dark" ? "gray.200" : "gray.800",
-      }),
-    },
-  },
-});
+
 
 function ProtectedRoute({ element, isAuth }) {
   const location = useLocation();
@@ -86,7 +48,41 @@ function CASCallback({ onLogin }) {
       localStorage.setItem("authToken", token);
       localStorage.setItem("userId", userId);
       onLogin();
-      navigate("/profile");
+
+      // Fetch user profile to determine redirect
+      const checkUserProfile = async () => {
+        try {
+          const res = await fetch(`/api/user/${userId}/profile`, {
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
+          const data = await res.json();
+
+          if (data.success) {
+            const user = data.user;
+            // Check if profile is complete
+            const isProfileComplete = user.fname && user.lname && user.age && user.contactNo && user.contactNo !== "0000000000";
+
+            if (!isProfileComplete) {
+              // New user or incomplete profile -> redirect to profile page
+              navigate("/profile");
+            } else {
+              // Existing user with complete profile -> redirect to marketplace
+              navigate("/");
+            }
+          } else {
+            // If can't fetch profile, default to profile page
+            navigate("/profile");
+          }
+        } catch (error) {
+          console.error("Error fetching user profile:", error);
+          navigate("/profile");
+        }
+      };
+
+      checkUserProfile();
     } else {
       navigate("/login");
     }
@@ -128,7 +124,6 @@ function App() {
     <ChakraProvider theme={theme}>
       <Box
         minH={"100vh"}
-        bg="purple.50"
         position="relative"
         overflowX="auto"
         whiteSpace="nowrap"
@@ -200,6 +195,9 @@ function App() {
             />
           </Routes>
         </Box>
+
+        {/* Floating ChatBot - only show when authenticated */}
+        {isAuth && <FloatingChatBot />}
       </Box>
     </ChakraProvider>
   );

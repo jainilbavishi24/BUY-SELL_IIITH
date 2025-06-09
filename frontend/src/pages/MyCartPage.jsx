@@ -67,7 +67,7 @@ const MyCartPage = () => {
 
       console.log("Sending order payload:", orderPayload);
 
-      const res = await fetch(`http://localhost:5000/api/order/checkout`, {
+      const res = await fetch(`/api/order/checkout`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

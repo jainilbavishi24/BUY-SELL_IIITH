@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import {
-  Container,
   VStack,
   Input,
   Button,
@@ -11,8 +10,12 @@ import {
   FormLabel,
   FormErrorMessage,
   Box,
-  Flex
+  useColorModeValue,
+  IconButton,
+  HStack,
+  useColorMode,
 } from "@chakra-ui/react";
+import { FaMoon, FaSun } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 
 const SignupPage = () => {
@@ -28,6 +31,7 @@ const SignupPage = () => {
 
   const toast = useToast();
   const navigate = useNavigate();
+  const { colorMode, toggleColorMode } = useColorMode();
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -108,9 +112,44 @@ const SignupPage = () => {
   };
 
   return (
-    <Container maxW="container.sm" py={12}>
-      <VStack spacing={6}>
-        <Heading>Create an Account</Heading>
+    <Box
+      position="fixed"
+      top="0"
+      left="0"
+      right="0"
+      bottom="0"
+      display="flex"
+      alignItems="center"
+      justifyContent="center"
+      bg={useColorModeValue("gray.50", "gray.900")}
+      p={4}
+      overflowY="auto"
+    >
+      <Box
+        w="100%"
+        maxW="500px"
+        p={8}
+        bg={useColorModeValue("white", "gray.800")}
+        borderWidth={1}
+        borderColor={useColorModeValue("gray.200", "gray.600")}
+        borderRadius="xl"
+        boxShadow="2xl"
+        mx="auto"
+        my={4}
+      >
+        <VStack spacing={6}>
+          <HStack w="full" justify="space-between" align="center">
+            <Heading color={useColorModeValue("gray.800", "white")} flex="1" textAlign="center">
+              Create an Account
+            </Heading>
+            <IconButton
+              aria-label="Toggle color mode"
+              icon={colorMode === "light" ? <FaMoon /> : <FaSun />}
+              onClick={toggleColorMode}
+              variant="ghost"
+              size="sm"
+            />
+          </HStack>
         
         <FormControl isInvalid={!!errors.fname} isRequired>
           <FormLabel>First Name</FormLabel>
@@ -200,8 +239,9 @@ const SignupPage = () => {
             Log In
           </Button>
         </Text>
-      </VStack>
-    </Container>
+        </VStack>
+      </Box>
+    </Box>
   );
 };
 

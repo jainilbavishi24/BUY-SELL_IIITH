@@ -3,9 +3,9 @@ import jwt from "jsonwebtoken";
 import User from "../models/user.model.js";
 import Item from "../models/item.model.js";
 import Order from "../models/order.model.js";
-import { hashOTP, generateOTP } from "../utils/otp.js";
 import bcrypt from "bcrypt";
 import mongoose from "mongoose";
+import crypto from "crypto";
 
 const userRouter = express.Router();
 
@@ -19,7 +19,7 @@ const authenticateUser = (req, res, next) => {
   const token = authHeader.split(" ")[1];
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET); 
+    const decoded = jwt.verify(token, "abc"); 
     req.user = decoded; 
     next();
   } catch (error) {
@@ -56,7 +56,7 @@ userRouter.get("/:id/cart", authenticateUser, async (req, res) => {
 userRouter.get("/:id/items", authenticateUser, async (req, res) => {
   try {
     const { id } = req.params;
-    const items = await Item.find({ createdBy: id });
+    const items = await Item.find({ sellerID: id });
     res.json({ success: true, items });
   } catch (error) {
     res.status(500).json({ success: false, message: "Error fetching items.", error });
@@ -678,8 +678,12 @@ userRouter.post("/regenerate-otp", authenticateUser, async (req, res) => {
 userRouter.get("/:sellerID", async (req, res) => {
   const { sellerID } = req.params;
 
+  // Validate ObjectId
+  if (!mongoose.Types.ObjectId.isValid(sellerID)) {
+    return res.status(400).json({ success: false, message: "Invalid seller ID" });
+  }
+
   try {
-   
     const vendor = await User.findById(sellerID, 'fname lname email contactNo');
 
     if (!vendor) {

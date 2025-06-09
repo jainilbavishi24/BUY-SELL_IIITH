@@ -56,10 +56,36 @@ const userSchema = new mongoose.Schema({
     cart: [{
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Item'
-
     }],
     sellerReviews: [reviewSchema],
-    
+
+    // New fields for enhanced authentication
+    phoneNumber: {
+        type: String,
+        default: ""
+    },
+    isProfileComplete: {
+        type: Boolean,
+        default: false
+    },
+    lastLogin: {
+        type: Date,
+        default: Date.now
+    },
+    passwordResetOTP: {
+        type: String,
+        default: null
+    },
+    passwordResetOTPExpires: {
+        type: Date,
+        default: null
+    },
+    isNewUser: {
+        type: Boolean,
+        default: true
+    }
+}, {
+    timestamps: true
 });
 
 const User = mongoose.model("User", userSchema);

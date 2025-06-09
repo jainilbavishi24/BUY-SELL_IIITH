@@ -1,5 +1,4 @@
 import React from "react";
-import { useState } from "react";
 import {
   Button,
   Container,
@@ -7,25 +6,36 @@ import {
   HStack,
   Text,
   Box,
+  IconButton,
+  useColorMode,
+  useColorModeValue,
+  Tooltip,
 } from "@chakra-ui/react";
-import { Link,useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   FaPlus,
   FaShoppingCart,
   FaHistory,
   FaTruck,
+  FaMoon,
+  FaSun,
 } from "react-icons/fa";
 import { CgProfile } from "react-icons/cg";
-import ChatBotIcon from "./ChatBotIcon";
-import ChatBot from "./ChatBot";
 
 const Navbar = ({ isAuth, onLogout }) => {
   const navigate = useNavigate();
+  const { colorMode, toggleColorMode } = useColorMode();
+  const bg = useColorModeValue("white", "gray.800");
+  const borderColor = useColorModeValue("gray.200", "gray.700");
+  const brandGradient = useColorModeValue(
+    "linear(to-r, brand.500, accent.500)",
+    "linear(to-r, brand.400, accent.400)"
+  );
 
   const handleLogout = async () => {
     try {
 
-      const response = await fetch("http://localhost:5000/api/auth/logout", {
+      const response = await fetch("/api/auth/logout", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -54,114 +64,118 @@ const Navbar = ({ isAuth, onLogout }) => {
     }
   };
 
-  const [isChatOpen, setIsChatOpen] = useState(false);
+
 
   return (
-    <Container 
-      maxW="full" 
-      bg="purple.600" 
-      color="white" 
-      boxShadow="md" 
-      className="sticky top-0 z-50 shadow-lg"
+    <Box
+      w="100vw"
+      bg={useColorModeValue("white", "gray.800")}
+      color={useColorModeValue("gray.800", "white")}
+      boxShadow="md"
+      borderBottom="1px"
+      borderColor={useColorModeValue("gray.200", "gray.700")}
+      position="sticky"
+      top={0}
+      zIndex={1000}
     >
-      <Flex
-        maxW="1140px"
-        margin="auto"
-        alignItems="center"
-        justifyContent="space-between"
-        flexDir={{ base: "column", md: "row" }}
-        className="py-3 px-4 md:flex-row flex-col"
-      >
-        {/* Logo Section */}
-        <Flex 
-          alignItems="center" 
-          className="mb-3 md:mb-0 transition-transform duration-300 hover:scale-105"
-        >
-          <Box
-            mr={4}
-            fontSize="2xl"
-            fontWeight="bold"
-            bg="purple.500"
-            p={2}
-            borderRadius="full"
-            className="animate-pulse hover:animate-none"
-          >
-            🛍️
-          </Box>
-          <Text 
-            fontSize="2xl" 
-            fontWeight="bold" 
-            color="white"
-            className="hover:text-purple-200 transition-colors duration-300"
-          >
-            <Link to={isAuth ? "/" : "/login"}>MarketPulse</Link>
-          </Text>
-        </Flex>
-
-        {/* Navigation Links */}
-        <HStack 
-          spacing={6} 
+      <Container maxW="container.xl" px={4}>
+        <Flex
+          h={16}
           alignItems="center"
-          className="space-x-4 md:space-x-6"
+          justifyContent="space-between"
+          w="full"
         >
+          {/* Logo Section */}
+          <Flex alignItems="center" flexShrink={0}>
+            <Box
+              mr={3}
+              fontSize="xl"
+              fontWeight="bold"
+              bg={useColorModeValue("blue.500", "blue.400")}
+              p={2}
+              borderRadius="full"
+            >
+              🛍️
+            </Box>
+            <Text
+              fontSize="xl"
+              fontWeight="bold"
+              color={useColorModeValue("gray.800", "white")}
+            >
+              <Link to={isAuth ? "/" : "/login"}>MarketPulse</Link>
+            </Text>
+          </Flex>
+
+          {/* Center Navigation */}
           {isAuth && (
-            <>
+            <HStack spacing={3} alignItems="center" flex={1} justify="center">
               {[
-                { to: "/create", icon: FaPlus, text: null },
-                { to: "/my-cart", icon: FaShoppingCart, text: "My Cart" },
-                { to: "/order-history", icon: FaHistory, text: "Order History" },
-                { to: "/deliver-items", icon: FaTruck, text: "Deliver Items" },
-                { to: "/profile", icon: CgProfile, text: null },
+                { to: "/create", icon: FaPlus, text: "Create" },
+                { to: "/my-cart", icon: FaShoppingCart, text: "Cart" },
+                { to: "/order-history", icon: FaHistory, text: "Orders" },
+                { to: "/deliver-items", icon: FaTruck, text: "Deliver" },
+                { to: "/profile", icon: CgProfile, text: "Profile" },
               ].map(({ to, icon: Icon, text }) => (
-                <Link to={to} key={to} className="group">
+                <Link to={to} key={to}>
                   <Button
-                    colorScheme="whiteAlpha"
-                    color="white"
-                    className="
-                      transition-all 
-                      duration-300 
-                      group-hover:bg-purple-500/20 
-                      group-hover:scale-105 
-                      flex 
-                      items-center 
-                      gap-2
-                    "
+                    variant="ghost"
+                    size="sm"
+                    px={3}
+                    _hover={{
+                      bg: useColorModeValue("gray.100", "gray.700"),
+                      transform: "translateY(-1px)",
+                    }}
+                    transition="all 0.2s"
                   >
-                    {text ? (
-                      <>
-                        {text} <Icon className="ml-2 group-hover:animate-bounce" />
-                      </>
-                    ) : (
-                      <Icon className="hover:animate-pulse" />
-                    )}
+                    <Icon />
+                    <Text ml={2} display={{ base: "none", lg: "block" }} fontSize="sm">
+                      {text}
+                    </Text>
                   </Button>
                 </Link>
               ))}
-            </>
+            </HStack>
           )}
 
-          <ChatBotIcon onClick={() => setIsChatOpen(true)} />
-          <ChatBot isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
+          {/* Spacer for non-authenticated users */}
+          {!isAuth && <Box flex={1} />}
 
-          {isAuth && (
-            <Button
-              colorScheme="red"
-              onClick={handleLogout}
-              className="
-                transition-all 
-                duration-300 
-                hover:scale-110 
-                hover:bg-red-600 
-                shadow-md 
-                hover:shadow-lg
-              "
-            >
-              Logout
-            </Button>
-          )}
-        </HStack>
-      </Flex>
-    </Container>
+          {/* Right Controls */}
+          <HStack spacing={3} alignItems="center" flexShrink={0}>
+            {/* Theme Toggle */}
+            <IconButton
+              aria-label="Toggle color mode"
+              icon={colorMode === 'light' ? <FaMoon /> : <FaSun />}
+              onClick={toggleColorMode}
+              variant="ghost"
+              size="sm"
+              _hover={{
+                bg: useColorModeValue("gray.100", "gray.700"),
+                transform: "rotate(180deg)",
+              }}
+              transition="all 0.3s"
+            />
+
+            {isAuth && (
+              <Button
+                colorScheme="red"
+                size="sm"
+                onClick={handleLogout}
+                px={4}
+                _hover={{
+                  transform: "translateY(-1px)",
+                  boxShadow: "md",
+                }}
+                transition="all 0.2s"
+              >
+                <Text display={{ base: "none", sm: "block" }}>Logout</Text>
+                <Text display={{ base: "block", sm: "none" }}>🚪</Text>
+              </Button>
+            )}
+          </HStack>
+        </Flex>
+      </Container>
+    </Box>
   );
 };
 

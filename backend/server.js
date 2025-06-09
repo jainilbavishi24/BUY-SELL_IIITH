@@ -5,17 +5,14 @@ import { connectDB } from "./config/db.js";
 import router from "./routers/route.js";
 import authRouter from "./routers/auth.js";
 import userRouter from "./routers/user.js";
-import Order from "./models/order.model.js";
 import cors from "cors";
 import crypto from "crypto";
-import bcrypt from "bcrypt";
 import User from "./models/user.model.js";
 import jwt from "jsonwebtoken";
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
 import xml2js from 'xml2js';
 import https from 'https';
-import Item from "./models/item.model.js";
 
 
 
@@ -71,7 +68,7 @@ app.post('/api/auth/cas-validate', async (req, res) => {
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
 
-const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
 app.post('/api/chatbot', async (req, res) => {
   const { message, history } = req.body;
@@ -95,7 +92,7 @@ app.post('/api/chatbot', async (req, res) => {
     });
 
     const result = await chat.sendMessage(message);
-    const response = await result.response.text();
+    const response = result.response.text();
 
     res.json({
       success: true,
@@ -157,18 +154,26 @@ const casLoginCallback = async (req, res) => {
     let user = await User.findOne({ email });
 
     if (!user) {
+      const nameParts = email.split('@')[0].split('.');
       user = new User({
         email,
         password: crypto.randomBytes(16).toString('hex'),
-        name: email.split('@')[0],
-        phoneNumber: '0000000000',
+        fname: nameParts[0] || 'User',
+        lname: nameParts[1] || '',
+        contactNo: '0000000000',
+        isNewUser: true,
+        isProfileComplete: false, // CAS users need to complete their profile
       });
+      await user.save();
+    } else {
+      // Update last login for existing users
+      user.lastLogin = new Date();
       await user.save();
     }
 
     const token = jwt.sign(
       { userId: user._id },
-      process.env.JWT_SECRET,
+      "abc",
       { expiresIn: '24h' }
     );
 
@@ -183,7 +188,7 @@ const casLoginCallback = async (req, res) => {
 app.get('/api/auth/cas/callback', casLoginCallback);
 
 
-const handleLogout = async (req, res) => {
+const handleLogout = async (_req, res) => {
   try {
 
     const serviceURL = encodeURIComponent('http://localhost:5173/login');

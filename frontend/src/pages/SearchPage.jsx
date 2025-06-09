@@ -17,8 +17,16 @@ import {
   Flex,
   Badge,
   useColorModeValue,
+  Wrap,
+  WrapItem,
+  Button,
+  Icon,
+  HStack,
+  Divider,
 } from "@chakra-ui/react";
-import { SearchIcon, StarIcon } from "@chakra-ui/icons";
+import { SearchIcon } from "@chakra-ui/icons";
+import { PRODUCT_CATEGORIES, getCategoryIcon, getCategoryLabel } from "../constants/categories";
+import { FaFilter, FaRupeeSign } from "react-icons/fa";
 
 const SearchPage = () => {
   const [items, setItems] = useState([]);
@@ -107,23 +115,51 @@ const SearchPage = () => {
             />
           </InputGroup>
 
-          {/* Category Checkboxes */}
-          <Box flex={1} w="full">
-            <CheckboxGroup colorScheme="blue" onChange={handleCategoryChange}>
-            <Stack
-                spacing={2}
-                direction={{ base: "column", md: "row" }}
-                justify="center"
-                align="center"
-              >
-                <Checkbox value="Electronics">Electronics</Checkbox>
-                <Checkbox value="Books">Books</Checkbox>
-                <Checkbox value="Clothing">Clothing</Checkbox>
-                <Checkbox value="Home">Home</Checkbox>
-              </Stack>
-            </CheckboxGroup>
-          </Box>
+          {/* Clear Filters Button */}
+          <Button
+            variant="outline"
+            onClick={() => {
+              setSelectedCategories([]);
+              setSearchTerm("");
+            }}
+            size="md"
+          >
+            Clear Filters
+          </Button>
         </Flex>
+
+        {/* Category Filter Section */}
+        <Box>
+          <HStack spacing={3} mb={4}>
+            <Icon as={FaFilter} color="brand.500" />
+            <Heading size="md" color={useColorModeValue("gray.700", "gray.300")}>
+              Filter by Category
+            </Heading>
+          </HStack>
+
+          <CheckboxGroup colorScheme="brand" onChange={handleCategoryChange} value={selectedCategories}>
+            <Wrap spacing={3}>
+              {PRODUCT_CATEGORIES.map((category) => (
+                <WrapItem key={category.value}>
+                  <Checkbox
+                    value={category.value}
+                    size="lg"
+                    colorScheme="brand"
+                  >
+                    <HStack spacing={2}>
+                      <Text fontSize="lg">{category.icon}</Text>
+                      <Text fontSize="sm" fontWeight="medium">
+                        {category.label}
+                      </Text>
+                    </HStack>
+                  </Checkbox>
+                </WrapItem>
+              ))}
+            </Wrap>
+          </CheckboxGroup>
+        </Box>
+
+        <Divider />
 
         {/* Product Grid */}
         <SimpleGrid
@@ -154,24 +190,35 @@ const SearchPage = () => {
                   w="100%" 
                   h={{ base: "150px", md: "200px" }} 
                 />
-                <Heading size="md" color={accentColor}>
+                <Heading size="md" color={accentColor} noOfLines={1}>
                   {item.name}
                 </Heading>
-                <Text color={textColor} noOfLines={2}>
+
+                {/* Category Badge */}
+                <HStack spacing={2}>
+                  <Badge colorScheme="brand" fontSize="xs">
+                    {getCategoryIcon(item.category)} {getCategoryLabel(item.category)}
+                  </Badge>
+                </HStack>
+
+                <Text color={textColor} noOfLines={2} fontSize="sm">
                   {item.description}
                 </Text>
 
                 {vendors[item.sellerID] && (
-                  <Text fontSize="sm" color={textColor} fontWeight="bold">
-                    Vendor: {vendors[item.sellerID].fname}{" "}
+                  <Text fontSize="xs" color={textColor} fontWeight="medium">
+                    Seller: {vendors[item.sellerID].fname}{" "}
                     {vendors[item.sellerID].lname}
                   </Text>
                 )}
 
                 <Flex justify="space-between" align="center">
-                  <Badge colorScheme="green" fontSize="lg">
-                    ${item.price}
-                  </Badge>
+                  <HStack>
+                    <Icon as={FaRupeeSign} color="green.500" boxSize={4} />
+                    <Text fontSize="xl" fontWeight="bold" color="green.500">
+                      {item.price}
+                    </Text>
+                  </HStack>
                 </Flex>
               </VStack>
             </Box>

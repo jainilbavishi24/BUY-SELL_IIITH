@@ -6,7 +6,13 @@ const MyItemsPage = () => {
 
   useEffect(() => {
     const fetchItems = async () => {
-      const res = await fetch(`/api/user/products`, {
+      const userId = localStorage.getItem("userId");
+      if (!userId) {
+        console.error("User ID not found");
+        return;
+      }
+
+      const res = await fetch(`/api/user/${userId}/items`, {
         headers: { Authorization: `Bearer ${localStorage.getItem("authToken")}` },
       });
       const data = await res.json();
