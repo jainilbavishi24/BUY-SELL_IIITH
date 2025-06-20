@@ -74,15 +74,32 @@ app.post('/api/chatbot', async (req, res) => {
   const { message, history } = req.body;
 
   try {
-    const formattedHistory = history
-      .filter(msg => msg.isUser)
-      .map(msg => ({
-        role: 'user',
-        parts: [{ text: msg.text }]
-      }));
+    // Platform context to include with every message
+    const platformContext = `Context: You are a helpful assistant for Buy-Sell IIITH, a marketplace platform for IIIT Hyderabad students. Key features: IIIT email authentication, marketplace browsing, shopping cart, profile management, SMS password reset, dark/light mode. Main pages: Home (marketplace), Create (add items), My Cart, Profile, My Items, Order History. Always provide helpful, IIIT community-focused answers.`;
 
+    // Build conversation history properly - only include actual user/bot exchanges
+    const conversationHistory = [];
+
+    // Process history - skip the initial welcome message from frontend
+    const userBotHistory = history.filter((msg, index) => {
+      // Skip the first message if it's the welcome message from bot
+      if (index === 0 && !msg.isUser && msg.text.includes("Buy-Sell IIITH assistant")) {
+        return false;
+      }
+      return true;
+    });
+
+    // Add filtered history to conversation
+    userBotHistory.forEach(msg => {
+      conversationHistory.push({
+        role: msg.isUser ? 'user' : 'model',
+        parts: [{ text: msg.text }]
+      });
+    });
+
+    // Start chat with the conversation history
     const chat = model.startChat({
-      history: formattedHistory,
+      history: conversationHistory,
       generationConfig: {
         temperature: 0.7,
         topK: 40,
@@ -91,7 +108,9 @@ app.post('/api/chatbot', async (req, res) => {
       },
     });
 
-    const result = await chat.sendMessage(message);
+    // Send the current message with context
+    const messageWithContext = `${platformContext}\n\nUser: ${message}`;
+    const result = await chat.sendMessage(messageWithContext);
     const response = result.response.text();
 
     res.json({

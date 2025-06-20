@@ -22,12 +22,15 @@ const ChatMessage = ({ message, isUser }) => (
     bg={isUser ? 'blue.500' : 'gray.100'}
     color={isUser ? 'white' : 'black'}
     px={4}
-    py={2}
+    py={3}
     borderRadius="lg"
-    maxW="80%"
-    my={1}
+    maxW="85%"
+    my={2}
+    boxShadow="sm"
   >
-    <Text>{message}</Text>
+    <Text whiteSpace="pre-line" fontSize="sm" lineHeight="1.5">
+      {message}
+    </Text>
   </Box>
 );
 
@@ -44,9 +47,9 @@ const ChatBot = ({ isOpen, onClose }) => {
 
 
   useEffect(() => {
-    setMessages([{ 
-      text: "Hi! I'm your Buy-Sell assistant. How can I help you today?", 
-      isUser: false 
+    setMessages([{
+      text: "Hi! I'm your Buy-Sell IIITH assistant! 🎓\n\nI'm here to help you with our marketplace platform designed specifically for the IIIT Hyderabad community.\n\nI can help you with:\n• Buying and selling items\n• Managing your profile\n• Understanding platform features\n• Navigating the marketplace\n• Account and security questions\n• IIIT CAS login and authentication\n\nWhat would you like to know about our IIIT marketplace?",
+      isUser: false
     }]);
     scrollToBottom();
   }, []);
