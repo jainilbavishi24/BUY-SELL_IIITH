@@ -1,92 +1,43 @@
 import mongoose from "mongoose";
-import Item from "./item.model.js";
 
 const reviewSchema = new mongoose.Schema({
   userId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "User",
-    required: true,
+    required: [true, "userId is required"], // Ensure userId is always set
   },
   itemId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Item",
-    required: true,
+    required: [true, "itemId is required"], // Ensure itemId is always set
   },
   text: {
     type: String,
-    required: true,
+    required: [true, "Review text is required"],
   },
   rating: {
     type: Number,
-    required: true,
-    min: 1,
-    max: 5,
+    required: [true, "Rating is required"],
   },
 });
 
-
-reviewSchema.index({ userId: 1, itemId: 1 }, { unique: true });
-
 const userSchema = new mongoose.Schema({
-    fname: {
-        type: String,
-        default: ""
-    },
-    lname: {
-        type: String,
-        default: ""
-    },
-    email: {
-        type: String,
-        required: true,
-        unique: true
-    },
-    age: {
-        type: Number,
-        default: 0
-    },
-    contactNo: {
-        type: String,
-        default: "0000000000"
-    },
-    password: {
-        type: String,
-        required: false
-    },
-    cart: [{
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Item'
-    }],
-    sellerReviews: [reviewSchema],
-
-    // New fields for enhanced authentication
-    phoneNumber: {
-        type: String,
-        default: ""
-    },
-    isProfileComplete: {
-        type: Boolean,
-        default: false
-    },
-    lastLogin: {
-        type: Date,
-        default: Date.now
-    },
-    passwordResetOTP: {
-        type: String,
-        default: null
-    },
-    passwordResetOTPExpires: {
-        type: Date,
-        default: null
-    },
-    isNewUser: {
-        type: Boolean,
-        default: true
-    }
-}, {
-    timestamps: true
+  fname: String,
+  lname: String,
+  email: { type: String, unique: true },
+  password: String,
+  age: Number,
+  contactNo: String,
+  cart: [{ type: mongoose.Schema.Types.ObjectId, ref: "Item" }],
+  sellerReviews: {
+    type: [reviewSchema],
+    default: [],
+  },
+  isNewUser: { type: Boolean, default: true },
+  isProfileComplete: { type: Boolean, default: false },
 });
+
+userSchema.index({ "sellerReviews.userId": 1, "sellerReviews.itemId": 1 }, { unique: true, sparse: true });
 
 const User = mongoose.model("User", userSchema);
 export default User;

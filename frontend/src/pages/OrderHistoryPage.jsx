@@ -1,5 +1,3 @@
-
-
 import React, { useEffect, useState } from "react";
 import {
   Container,
@@ -15,530 +13,159 @@ import {
   Icon,
   Textarea,
   useToast,
+  Tabs,
+  TabList,
+  Tab,
+  TabPanels,
+  TabPanel,
+  Card,
+  CardBody,
+  Stack,
+  Flex,
+  Spinner
 } from "@chakra-ui/react";
-import { StarIcon } from "@chakra-ui/icons";
+import { StarIcon, InfoIcon } from "@chakra-ui/icons";
+import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
+import { FaShoppingBag, FaRupeeSign } from "react-icons/fa";
+
+const MotionContainer = motion(Container);
 
 const OrderHistoryPage = () => {
-  const [activeTab, setActiveTab] = useState("buyer");
   const [orders, setOrders] = useState([]);
-  const [reviewStates, setReviewStates] = useState({});
-  const [reviewedItems, setReviewedItems] = useState(new Set());
-
-  const [buyerOrders, setBuyerOrders] = useState([]);
   const [sellerOrders, setSellerOrders] = useState([]);
-  const [otpStates, setOtpStates] = useState({});
+  const [loading, setLoading] = useState(true);
   const userId = localStorage.getItem("userId");
-  const textColor = useColorModeValue("gray.800", "white");
-  const [visibleOTPs, setVisibleOTPs] = useState({});
-  const [regeneratingOTP, setRegeneratingOTP] = useState({});
   const toast = useToast();
+  const navigate = useNavigate();
 
   useEffect(() => {
-    const loadReviewedItems = () => {
-      const savedReviews = localStorage.getItem(`reviewed_items_${userId}`);
-      if (savedReviews) {
-        setReviewedItems(new Set(JSON.parse(savedReviews)));
+    const fetchOrders = async () => {
+      if (!userId) {
+        setLoading(false);
+        return;
       }
-    };
-    const fetchExistingReviews = async () => {
-      try {
-        const response = await fetch("/api/reviews/check-reviewed", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("authToken")}`,
-          },
-          body: JSON.stringify({
-            userId,
-            itemIds: sellerOrders.map((order) => order.itemId),
-          }),
-        });
+      
+      setLoading(true);
+      const token = localStorage.getItem('authToken');
+      if (!token) {
+        toast({ title: "Authentication error", description: "Please log in again.", status: "error", duration: 3000, isClosable: true });
+        setLoading(false);
+        return;
+      }
 
-        const data = await response.json();
-        if (data.success && data.reviewedItems) {
-          const newReviewedItems = new Set(data.reviewedItems);
-          setReviewedItems(newReviewedItems);
-          localStorage.setItem(
-            `reviewed_items_${userId}`,
-            JSON.stringify([...newReviewedItems])
-          );
+      try {
+        const [buyerRes, sellerRes] = await Promise.all([
+          fetch(`/api/order/history?userId=${userId}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          }),
+          fetch(`/api/seller/pastorders?sellerID=${userId}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          })
+        ]);
+
+        const buyerData = await buyerRes.json();
+        if (buyerData.success) {
+          setOrders(buyerData.orders);
+        } else if (buyerData.message && buyerData.message !== "No orders found.") {
+          toast({ title: "Error fetching your purchases", description: buyerData.message, status: "warning", duration: 3000, isClosable: true });
+        }
+
+        const sellerData = await sellerRes.json();
+        if (sellerData.success) {
+          const filteredOrders = sellerData.orders
+            .map((order) => ({
+              ...order,
+              items: order.items.filter((item) => item.sellerID === userId),
+            }))
+            .filter((order) => order.items.length > 0);
+          setSellerOrders(filteredOrders);
+        } else {
+          toast({ title: "Error fetching your sales", description: sellerData.message, status: "warning", duration: 3000, isClosable: true });
         }
       } catch (error) {
-        console.error("Error fetching existing reviews:", error);
+        toast({ title: "Error fetching orders", description: "A network error occurred.", status: "error", duration: 3000, isClosable: true });
+      } finally {
+        setLoading(false);
       }
     };
 
-    fetchExistingReviews();
-    fetchBuyerOrders();
-    loadReviewedItems();
-    fetchSellerOrders();
-  }, [userId, sellerOrders]);
+    fetchOrders();
+  }, [userId, toast]);
 
- 
+  const renderSkeletons = () => (
+    [...Array(3)].map((_, i) => (
+      <Card key={i} width="100%" mt={4} variant="outline">
+        <CardBody><Spinner /></CardBody>
+      </Card>
+    ))
+  );
 
-  const regenerateOTP = async (orderId, itemId) => {
-    try {
-      setRegeneratingOTP((prevState) => ({ ...prevState, [itemId]: true }));
+  const renderEmptyState = (message, buttonText, buttonAction) => (
+    <VStack spacing={5} mt={20} textAlign="center">
+      <Icon as={FaShoppingBag} w={12} h={12} color="gray.400" />
+      <Heading size="md" color="gray.500">{message}</Heading>
+      <Button colorScheme="brand" onClick={buttonAction}>{buttonText}</Button>
+    </VStack>
+  );
 
-      const response = await fetch("/api/order/regenerate-otp", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("authToken")}`,
-        },
-        body: JSON.stringify({ orderId: orderId, itemId: itemId }), 
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-       
-        const otpExpiration = new Date().getTime() + 60000; 
-        localStorage.setItem(
-          `otp_${itemId}`,
-          JSON.stringify({ otp: data.otp, expiration: otpExpiration })
-        );
-
-       
-        setOtpStates((prev) => ({ ...prev, [itemId]: data.otp }));
-      } else {
-        toast({
-          title: data.error,
-          status: "error",
-          duration: 3000,
-          isClosable: true,
-        });
-      }
-    } catch (error) {
-      console.error("Error regenerating OTP:", error);
-      toast({
-        title: "Error regenerating OTP",
-        description: error.message,
-        status: "error",
-        duration: 3000,
-        isClosable: true,
-      });
-    } finally {
-      setRegeneratingOTP((prevState) => ({ ...prevState, [itemId]: false }));
-    }
+  const renderOrderCard = (order) => {
+    // Determine order status: if all items are completed, show 'Completed', else 'Pending'
+    const allCompleted = order.items.every(item => item.status === 'Completed');
+    const orderStatus = allCompleted ? 'Completed' : 'Pending';
+    return (
+      <Card key={order._id} width="100%" mt={4} variant="outline">
+        <CardBody>
+          <Stack spacing="3">
+            <Heading size='sm'>Order ID: {(order.transactionID || order._id).slice(0, 12)}...</Heading>
+            <Divider />
+            {order.items.map(item => (
+                <Flex key={item._id || item.itemId._id} justify="space-between" align="center">
+                    <Text>{item.name || item.itemId.name}</Text>
+                    <HStack>
+                      <Icon as={FaRupeeSign} />
+                      <Text>{item.price || item.itemId.price}</Text>
+                      {/* Show OTP if order/item is not completed */}
+                      {item.status !== 'Completed' && localStorage.getItem(`otp_${item.itemId || item.itemId._id}`) && (
+                        <Box ml={4} p={1} px={2} borderRadius="md" bg="gray.700" color="white" fontSize="sm">
+                          OTP: {JSON.parse(localStorage.getItem(`otp_${item.itemId || item.itemId._id}`)).otp}
+                        </Box>
+                      )}
+                    </HStack>
+                </Flex>
+            ))}
+            <Divider />
+            <Flex justify="space-between" fontWeight="bold">
+                <Text>Total Amount</Text>
+                <HStack><Icon as={FaRupeeSign} /><Text>{order.amount}</Text></HStack>
+            </Flex>
+            <Text>Status: <Text as="span" fontWeight="semibold" color={orderStatus === 'Completed' ? 'green.400' : 'orange.400'}>{orderStatus}</Text></Text>
+          </Stack>
+        </CardBody>
+      </Card>
+    );
   };
-
-  const fetchBuyerOrders = async () => {
-    if (!userId) return;
-
-    try {
-      const res = await fetch(`/api/order/history?userId=${userId}`, {
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("authToken")}`,
-        },
-      });
-
-      if (!res.ok) {
-        throw new Error(`HTTP Error: ${res.status}`);
-      }
-
-      const data = await res.json();
-      if (data.success && Array.isArray(data.orders)) {
-       
-        const itemIds = data.orders.flatMap((order) =>
-          order.items.map((item) => item.itemId)
-        );
-        await fetchExistingReviews(itemIds);
-        setOrders(data.orders);
-      } else {
-        console.error(
-          "Failed to fetch orders:",
-          data.message || "Unknown error"
-        );
-      }
-    } catch (error) {
-      console.error("Error fetching orders:", error.message);
-    }
-  };
-
-  const fetchExistingReviews = async (itemIds) => {
-    try {
-      const response = await fetch("/api/reviews/check-reviewed", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("authToken")}`,
-        },
-        body: JSON.stringify({
-          userId,
-          itemIds,
-        }),
-      });
-
-      const data = await response.json();
-      if (data.success && data.reviewedItems) {
-        const newReviewedItems = new Set(data.reviewedItems);
-        setReviewedItems(newReviewedItems);
-        localStorage.setItem(
-          `reviewed_items_${userId}`,
-          JSON.stringify([...newReviewedItems])
-        );
-      }
-    } catch (error) {
-      console.error("Error fetching existing reviews:", error);
-    }
-  };
-
-  const fetchSellerOrders = async () => {
-    if (!userId) return;
-
-    try {
-      const res = await fetch(`/api/seller/pastorders?sellerID=${userId}`, {
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("authToken")}`,
-        },
-      });
-
-      const data = await res.json();
-      if (data.success) {
-        const filteredOrders = data.orders
-          .map((order) => ({
-            ...order,
-            items: order.items.filter((item) => item.sellerID === userId),
-          }))
-          .filter((order) => order.items.length > 0);
-        setSellerOrders(filteredOrders);
-      } else {
-        console.error("Failed to fetch seller orders:", data.message);
-      }
-    } catch (error) {
-      console.error("Error fetching seller orders:", error);
-    }
-  };
-
-  const handleReviewClick = (itemId) => {
-    if (reviewedItems.has(itemId)) return;
-    setReviewStates((prev) => ({
-      ...prev,
-      [itemId]: {
-        isWriting: true,
-        rating: 0,
-        text: "",
-      },
-    }));
-  };
-
-  const handleRatingClick = (itemId, rating) => {
-    setReviewStates((prev) => ({
-      ...prev,
-      [itemId]: {
-        ...prev[itemId],
-        rating,
-      },
-    }));
-  };
-
-  const handleReviewTextChange = (itemId, text) => {
-    setReviewStates((prev) => ({
-      ...prev,
-      [itemId]: {
-        ...prev[itemId],
-        text,
-      },
-    }));
-  };
-
-  const handleSubmitReview = async (item) => {
-    const reviewState = reviewStates[item.itemId];
-    if (!reviewState) return;
-
-    try {
-      const reviewData = {
-        userId: userId,
-        itemId: item.itemId,
-        sellerID: item.sellerID,
-        text: reviewState.text,
-        rating: reviewState.rating,
-      };
-
-      console.log("Review Data Sent:", reviewData);
-      const response = await fetch("/api/reviews/add", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("authToken")}`,
-        },
-        body: JSON.stringify(reviewData),
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        
-        const newReviewedItems = new Set(reviewedItems);
-        newReviewedItems.add(item.itemId);
-        setReviewedItems(newReviewedItems);
-
-        localStorage.setItem(
-          `reviewed_items_${userId}`,
-          JSON.stringify([...newReviewedItems])
-        );
-
-        toast({
-          title: "Review submitted successfully!",
-          status: "success",
-          duration: 3000,
-          isClosable: true,
-        });
-
-        setReviewStates((prev) => {
-          const newState = { ...prev };
-          delete newState[item.itemId];
-          return newState;
-        });
-      } else {
-        throw new Error(data.error || "Failed to submit review");
-      }
-    } catch (error) {
-      toast({
-        title: "Error submitting review",
-        description: error.message,
-        status: "error",
-        duration: 3000,
-        isClosable: true,
-      });
-    }
-  };
-
-  const ordersWithOTP = orders.map((order) => ({
-    ...order,
-    items: order.items.map((item) => ({
-      ...item,
-      otp: localStorage.getItem(`otp_${item.itemId}`) || "N/A",
-    })),
-  }));
 
   return (
-    <Container maxW="container.xl" py={12}>
-      <VStack spacing={8}>
-        <Heading>Order History</Heading>
-
-        {/* BUYER ORDERS SECTION */}
-        <HStack>
-          <Button
-            colorScheme={activeTab === "buyer" ? "blue" : "gray"}
-            onClick={() => setActiveTab("buyer")}
-          >
-            Buyer Orders
-          </Button>
-          <Button
-            colorScheme={activeTab === "seller" ? "blue" : "gray"}
-            onClick={() => setActiveTab("seller")}
-          >
-            Seller Orders
-          </Button>
-        </HStack>
-
-        <Divider />
-        {activeTab === "buyer" && (
-          <Box w="full">
-            <Heading size="lg" mb={4}>
-              Orders as Buyer
-            </Heading>
-            <Divider mb={4} />
-            <SimpleGrid
-              columns={{ base: 1, md: 2, lg: 3 }}
-              spacing={10}
-              w="full"
-            >
-              {ordersWithOTP.length > 0 ? (
-                ordersWithOTP.map((order) => (
-                  <VStack
-                    key={order._id}
-                    p={4}
-                    borderWidth={1}
-                    borderRadius="md"
-                    color={textColor}
-                    align="start"
-                    bg="white"
-                    boxShadow="sm"
-                  >
-                    <Text fontSize="xl" fontWeight="bold">
-                      Order ID: {order._id}
-                    </Text>
-                    <Text>Amount: ${order.amount}</Text>
-                    <Text>
-                      Status:{" "}
-                      {order.items.every((item) => item.status === "Completed")
-                        ? "Completed"
-                        : "Pending"}
-                    </Text>
-                    <Text fontWeight="bold">Items:</Text>
-                    {order.items.map((item) => (
-                      <Box
-                        key={item.itemId}
-                        w="100%"
-                        p={3}
-                        borderWidth={1}
-                        borderRadius="md"
-                        mt={2}
-                      >
-                        <Text>Name: {item.name}</Text>
-                        <Text>Price: ${item.price}</Text>
-                        <Text>Status: {item.status}</Text>
-                        <Text>
-                          OTP:{" "}
-                          {item.otp &&
-                            (() => {
-                              const storedOtp = JSON.parse(
-                                localStorage.getItem(`otp_${item.itemId}`)
-                              );
-                              if (storedOtp) {
-                                const currentTime = new Date().getTime();
-                                if (storedOtp.expiration > currentTime) {
-                                  return storedOtp.otp;
-                                } else {
-                                  return "OTP expired. Please regenerate.";
-                                }
-                              }
-                              return "No OTP available.";
-                            })()}
-                        </Text>
-
-                        {item.status !== "Completed" && (
-                          <Button
-                            mt={2}
-                            colorScheme="orange"
-                            size="sm"
-                            isLoading={regeneratingOTP[item.itemId]}
-                            onClick={() =>
-                              regenerateOTP(order._id, item.itemId)
-                            }
-                          >
-                            Regenerate OTP
-                          </Button>
-                        )}
-
-                        {item.status === "Completed" &&
-                          !reviewedItems.has(item.itemId) &&
-                          !reviewStates[item.itemId]?.isWriting && (
-                            <Button
-                              mt={2}
-                              colorScheme="teal"
-                              size="sm"
-                              onClick={() => handleReviewClick(item.itemId)}
-                            >
-                              Write Review
-                            </Button>
-                          )}
-
-                        {reviewStates[item.itemId]?.isWriting && (
-                          <VStack mt={3} align="start" spacing={3}>
-                            <Text>Rate this item:</Text>
-                            <HStack>
-                              {[1, 2, 3, 4, 5].map((star) => (
-                                <Icon
-                                  key={star}
-                                  as={StarIcon}
-                                  color={
-                                    star <= reviewStates[item.itemId].rating
-                                      ? "yellow.400"
-                                      : "gray.200"
-                                  }
-                                  cursor="pointer"
-                                  onClick={() =>
-                                    handleRatingClick(item.itemId, star)
-                                  }
-                                />
-                              ))}
-                            </HStack>
-                            <Textarea
-                              placeholder="Write your review here..."
-                              value={reviewStates[item.itemId].text}
-                              onChange={(e) =>
-                                handleReviewTextChange(
-                                  item.itemId,
-                                  e.target.value
-                                )
-                              }
-                            />
-                            <Button
-                              colorScheme="blue"
-                              size="sm"
-                              onClick={() => handleSubmitReview(item)}
-                            >
-                              Submit Review
-                            </Button>
-                          </VStack>
-                        )}
-
-                        {reviewedItems.has(item.itemId) && (
-                          <Text color="green.500" mt={2}>
-                            Review submitted
-                          </Text>
-                        )}
-                      </Box>
-                    ))}
-                  </VStack>
-                ))
-              ) : (
-                <Text fontSize="2xl">No orders found.</Text>
-              )}
-            </SimpleGrid>
-          </Box>
-        )}
-
-        {/* SELLER ORDERS SECTION */}
-        {activeTab === "seller" && (
-          <Box w="full">
-            <Heading size="lg" mt={10} mb={4}>
-              Orders as Seller
-            </Heading>
-            <Divider mb={4} />
-            <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={10}>
-              {sellerOrders.length > 0 ? (
-                sellerOrders.map((order) => (
-                  <Box
-                    key={order._id}
-                    p={4}
-                    borderWidth={1}
-                    borderRadius="md"
-                    color={textColor}
-                    bg="white"
-                    boxShadow="sm"
-                  >
-                    <Text fontSize="xl" fontWeight="bold">
-                      Order ID: {order._id}
-                    </Text>
-                    <Text>Amount: ${order.amount}</Text>
-                    <Text>
-                      Status:{" "}
-                      {order.items.every((item) => item.status === "Completed")
-                        ? "Completed"
-                        : "Pending"}
-                    </Text>
-                    <Divider my={2} />
-                    <Text fontWeight="bold">Items Sold:</Text>
-                    {order.items.map((item) => (
-                      <Box
-                        key={item.itemId._id}
-                        p={3}
-                        borderWidth={1}
-                        borderRadius="md"
-                        mt={2}
-                      >
-                        <Text>Name: {item.itemId.name}</Text>
-                        <Text>Price: ${item.itemId.price}</Text>
-                        <Text>Status: {item.status}</Text>
-                      </Box>
-                    ))}
-                  </Box>
-                ))
-              ) : (
-                <Text fontSize="lg">No orders found as a seller.</Text>
-              )}
-            </SimpleGrid>
-          </Box>
-        )}
+    <MotionContainer maxW="container.lg" py={8} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
+      <VStack spacing={6} align="stretch">
+        <Heading as="h1" size="xl" textAlign="center">Order History</Heading>
+        <Tabs isFitted variant="enclosed-colored" colorScheme="brand">
+          <TabList>
+            <Tab>My Purchases</Tab>
+            <Tab>My Sales</Tab>
+          </TabList>
+          <TabPanels>
+            <TabPanel>
+              {loading ? renderSkeletons() : orders.length > 0 ? orders.map(renderOrderCard) : renderEmptyState("You haven't purchased any items yet.", "Start Shopping", () => navigate("/"))}
+            </TabPanel>
+            <TabPanel>
+              {loading ? renderSkeletons() : sellerOrders.length > 0 ? sellerOrders.map(renderOrderCard) : renderEmptyState("You haven't sold any items yet.", "Sell an Item", () => navigate("/create"))}
+            </TabPanel>
+          </TabPanels>
+        </Tabs>
       </VStack>
-    </Container>
+    </MotionContainer>
   );
 };
 

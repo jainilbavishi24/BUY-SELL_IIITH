@@ -18,11 +18,16 @@ const authenticateUser = (req, res, next) => {
 
   const token = authHeader.split(" ")[1];
 
+  // DEBUG LOGGING
+  console.log("[AUTH DEBUG] Token received:", token);
+  console.log("[AUTH DEBUG] JWT_SECRET used:", process.env.JWT_SECRET);
+
   try {
-    const decoded = jwt.verify(token, "abc"); 
+    const decoded = jwt.verify(token, process.env.JWT_SECRET); 
     req.user = decoded; 
     next();
   } catch (error) {
+    console.error("[AUTH DEBUG] JWT verification error:", error);
     return res.status(401).json({ success: false, message: "Invalid token." });
   }
 };
@@ -251,11 +256,11 @@ userRouter.post("/:orderId/verify",authenticateUser, async (req, res) => {
     const isMatch = await bcrypt.compare(otp, order.hashedOTP);
     if (!isMatch) return res.status(400).json({ message: "Invalid OTP" });
 
-    order.status = "Delivered";
+    order.status = "completed";
     await order.save();
-    res.json({ success: true, message: "Order delivered successfully" });
+    res.json({ success: true, message: "Order completed successfully" });
   } catch (error) {
-    res.status(500).json({ message: "Error verifying OTP" });
+    res.status(500).json({ message: "Server error" });
   }
 });
 
@@ -438,9 +443,7 @@ userRouter.post("/add", authenticateUser, async (req, res) => {
   try {
     const { userId, itemId, text, rating, sellerID } = req.body;
 
-    console.log("Review Request Data:", req.body); 
-
-  
+    // Validate required fields
     if (!userId || !itemId || !text || !rating || !sellerID) {
       return res.status(400).json({
         success: false,
@@ -449,7 +452,14 @@ userRouter.post("/add", authenticateUser, async (req, res) => {
       });
     }
 
-   
+    // Validate ObjectId format for userId and itemId
+    if (!mongoose.Types.ObjectId.isValid(userId) || !mongoose.Types.ObjectId.isValid(itemId)) {
+      return res.status(400).json({
+        success: false,
+        error: "Invalid userId or itemId format",
+      });
+    }
+
     const seller = await User.findById(sellerID);
     if (!seller) {
       return res.status(404).json({
@@ -458,7 +468,7 @@ userRouter.post("/add", authenticateUser, async (req, res) => {
       });
     }
 
-    
+    // Check for duplicate reviews
     const existingReview = seller.sellerReviews.find(
       (review) => review.userId.toString() === userId && review.itemId.toString() === itemId
     );
@@ -470,7 +480,7 @@ userRouter.post("/add", authenticateUser, async (req, res) => {
       });
     }
 
-    
+    // Add new review
     const newReview = {
       userId,
       itemId,
@@ -478,7 +488,6 @@ userRouter.post("/add", authenticateUser, async (req, res) => {
       rating,
     };
 
-    
     seller.sellerReviews.push(newReview);
     await seller.save();
 
@@ -705,6 +714,65 @@ userRouter.get("/:sellerID", async (req, res) => {
   }
 });
 
+userRouter.post("/:orderId/regenerate-otp", async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const order = await Order.findById(orderId);
 
+    if (!order) {
+      return res.status(404).json({ success: false, message: "Order not found." });
+    }
+
+    if (order.status === "completed") {
+      return res.status(400).json({ success: false, message: "Order is already completed." });
+    }
+
+    // Allow new OTP if current one is older than 5 minutes
+    const fiveMinutes = 5 * 60 * 1000;
+    if (new Date() - order.updatedAt < fiveMinutes) {
+      return res.status(400).json({
+        success: false,
+        message: "A valid OTP already exists. Please try again after some time.",
+      });
+    }
+
+    const newOtp = Math.floor(100000 + Math.random() * 900000).toString();
+    order.hashedOTP = await bcrypt.hash(newOtp, 10);
+    order.otpCreatedAt = new Date(); // Reset the creation time
+    await order.save();
+
+    res.json({
+      success: true,
+      message: "New OTP has been generated.",
+      otp: newOtp, // Send the new OTP to the buyer
+    });
+  } catch (error) {
+    console.error("Error regenerating OTP:", error);
+    res.status(500).json({ success: false, message: "Server error while regenerating OTP." });
+  }
+});
+
+userRouter.post("/:orderId/complete", authenticateUser, async (req, res) => {
+  const { orderId } = req.params;
+  const { otp } = req.body;
+
+  try {
+    const order = await Order.findById(orderId);
+    if (!order) {
+      return res.status(404).json({ success: false, message: "Order not found." });
+    }
+
+    const isMatch = await bcrypt.compare(otp, order.hashedOTP);
+    if (!isMatch) {
+      return res.status(400).json({ success: false, message: "Invalid OTP" });
+    }
+
+    order.status = "completed";
+    await order.save();
+    res.json({ success: true, message: "Order completed successfully" });
+  } catch (error) {
+    res.status(500).json({ message: "Server error" });
+  }
+});
 
 export default userRouter;

@@ -10,8 +10,7 @@
 
   const authRouter = Router();
 
-  // const JWT_SECRET = process.env.JWT_SECRET ; 
-  const JWT_SECRET = "abc";
+  const JWT_SECRET = process.env.JWT_SECRET;
 
   authRouter.post("/signup", async (req, res) => {
     const { fname, lname, email, age, contactNo, password } = req.body;

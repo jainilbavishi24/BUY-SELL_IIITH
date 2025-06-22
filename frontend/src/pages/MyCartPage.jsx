@@ -9,12 +9,27 @@ import {
   useToast,
   SimpleGrid,
   useColorModeValue,
+  Modal,
+  ModalOverlay,
+  ModalContent,
+  ModalHeader,
+  ModalFooter,
+  ModalBody,
+  ModalCloseButton,
+  useDisclosure,
+  Input,
+  HStack,
+  IconButton,
+  Box
 } from "@chakra-ui/react";
+import { CopyIcon } from "@chakra-ui/icons";
 
 const MyCartPage = () => {
   const [cartItems, setCartItems] = useState([]);
   const [totalCost, setTotalCost] = useState(0);
   const toast = useToast();
+  const [otpModalOpen, setOtpModalOpen] = useState(false);
+  const [otpDetails, setOtpDetails] = useState([]);
 
   useEffect(() => {
     const fetchCart = async () => {
@@ -84,6 +99,8 @@ const MyCartPage = () => {
       }
 
       if (data.success) {
+        setOtpDetails(data.otpDetails);
+        setOtpModalOpen(true);
         data.otpDetails.forEach((item) => {
           const otpData = {
             otp: item.otp,
@@ -235,6 +252,38 @@ const MyCartPage = () => {
           Final Order
         </Button>
       </VStack>
+
+      {/* OTP Modal */}
+      <Modal isOpen={otpModalOpen} onClose={() => setOtpModalOpen(false)}>
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>Order OTPs</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody>
+            <VStack spacing={4} align="stretch">
+              {otpDetails.map((item) => (
+                <Box key={item.itemId} p={3} borderWidth={1} borderRadius="md" bg="gray.700">
+                  <Text fontWeight="bold">Item ID: {item.itemId}</Text>
+                  <HStack>
+                    <Text>OTP: <b>{item.otp}</b></Text>
+                    <IconButton
+                      aria-label="Copy OTP"
+                      icon={<CopyIcon />}
+                      size="sm"
+                      onClick={() => navigator.clipboard.writeText(item.otp)}
+                    />
+                  </HStack>
+                </Box>
+              ))}
+            </VStack>
+          </ModalBody>
+          <ModalFooter>
+            <Button colorScheme="blue" onClick={() => setOtpModalOpen(false)}>
+              Close
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
     </Container>
   );
 };

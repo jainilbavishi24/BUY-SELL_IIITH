@@ -3,23 +3,30 @@ import {
   Container,
   VStack,
   SimpleGrid,
-  Box,
+  Card,
+  CardBody,
   Heading,
   Text,
   Input,
   Button,
-  useColorModeValue,
   Divider,
   Flex,
   useToast,
+  Modal,
+  ModalOverlay,
+  ModalContent,
+  ModalHeader,
+  ModalFooter,
+  ModalBody,
+  ModalCloseButton,
+  useDisclosure,
+  Box
 } from "@chakra-ui/react";
-import { useDisclosure } from "@chakra-ui/react";
 
 const DeliverItemsPage = () => {
   const [orders, setOrders] = useState([]);
   const [otpInput, setOtpInput] = useState({});
   const sellerID = localStorage.getItem("userId");
-  const textColor = useColorModeValue("gray.800", "white");
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [currentItem, setCurrentItem] = useState(null);
   const toast = useToast();
@@ -117,29 +124,8 @@ const DeliverItemsPage = () => {
           isClosable: true,
         });
 
-        setOrders((prevOrders) => {
-          const updatedOrders = prevOrders
-            .map((order) => {
-              if (order._id === orderId) {
-                return {
-                  ...order,
-                  items: order.items.filter(
-                    (item) => item.itemId._id !== itemId
-                  ),
-                };
-              }
-              return order;
-            })
-            .filter((order) => order.items.length > 0);
-
-          return updatedOrders;
-        });
-
-        setOtpInput((prev) => {
-          const updated = { ...prev };
-          delete updated[itemId];
-          return updated;
-        });
+        fetchSellerOrders(); // Refetch orders to update the list
+        onClose(); // Close the modal
       } else {
         toast({
           title: "Error",
@@ -161,115 +147,131 @@ const DeliverItemsPage = () => {
     }
   };
 
+  const openModal = (item) => {
+    setCurrentItem(item);
+    onOpen();
+  };
+
   return (
-    <Container
-      maxW="container.xl"
-      py={12}
-      bgGradient="linear(to-r, teal.500, green.500)"
-    >
+    <Container maxW="container.xl" py={12}>
       <VStack spacing={8}>
-        <Heading as="h1" color="white">
-          Deliver Items
-        </Heading>
-        <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={10} w="full">
-          {orders.length > 0 ? (
-            orders.map((order) => (
-              <Box
-                key={order._id}
-                p={5}
-                borderWidth={1}
-                borderRadius="md"
-                boxShadow="md"
-                bg="white"
-                color={textColor}
-                _hover={{ bg: "gray.50" }}
-              >
-                <Heading size="md">Order ID: {order._id}</Heading>
-                <Text mt={2} fontSize="lg">
-                  Amount: ${order.amount}
-                </Text>
+        <Heading as="h1">Deliver Items</Heading>
+        {orders.length > 0 ? (
+          <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={10} w="full">
+            {orders.map((order) => (
+              <Card key={order._id} borderWidth={1} borderRadius="md" boxShadow="md">
+                <CardBody>
+                  <Heading size="md">Order ID: {order._id}</Heading>
+                  <Text mt={2} fontSize="lg">
+                    Amount: ₹{order.amount}
+                  </Text>
 
-                <Divider my={4} />
-                <Heading size="sm" mb={3}>
-                  Buyer Details
-                </Heading>
-                <Flex direction="column" gap={2}>
-                  {order.userId ? (
-                    <>
-                      <Text>
-                        <strong>Name:</strong> {order.userId.fname}{" "}
-                        {order.userId.lname}
-                      </Text>
-                      <Text>
-                        <strong>Email:</strong> {order.userId.email}
-                      </Text>
-                      <Text>
-                        <strong>Contact:</strong> {order.userId.contactNo}
-                      </Text>
-                    </>
-                  ) : (
-                    <Text color="red">Buyer information not available</Text>
-                  )}
-                </Flex>
-                <Divider my={4} />
-
-                <SimpleGrid columns={1} spacing={4} mt={4}>
-                  {order.items && order.items.length > 0 ? (
-                    order.items.map((item) => (
-                      <Box
-                        key={item.itemId._id}
-                        p={4}
-                        borderWidth={1}
-                        borderRadius="md"
-                        bg="gray.50"
-                      >
+                  <Divider my={4} />
+                  <Heading size="sm" mb={3}>
+                    Buyer Details
+                  </Heading>
+                  <Flex direction="column" gap={2}>
+                    {order.userId ? (
+                      <>
                         <Text>
-                          <strong>Item:</strong>{" "}
-                          {item.itemId.name || "Unknown Item"}
+                          <strong>Name:</strong> {order.userId.fname}{" "}
+                          {order.userId.lname}
                         </Text>
                         <Text>
-                          <strong>Price:</strong> ${item.itemId.price || "N/A"}
+                          <strong>Email:</strong> {order.userId.email}
                         </Text>
-                        <Input
-                          mt={2}
-                          type="text"
-                          placeholder="Enter OTP"
-                          value={otpInput[item.itemId._id] || ""}
-                          onChange={(e) =>
-                            setOtpInput({
-                              ...otpInput,
-                              [item.itemId._id]: e.target.value,
-                            })
-                          }
-                        />
-                        <Button
-                          colorScheme="teal"
-                          onClick={() =>
-                            handleCompleteOrder(item.itemId._id, order._id)
-                          }
-                          w="full"
-                          display="flex" // Use flexbox
-                          justifyContent="center" // Center horizontally
-                          alignItems="center" // Center vertically
-                          className="mx-auto" // Additional Tailwind centering
+                        <Text>
+                          <strong>Contact:</strong> {order.userId.contactNo}
+                        </Text>
+                      </>
+                    ) : (
+                      <Text color="red">Buyer information not available</Text>
+                    )}
+                  </Flex>
+                  <Divider my={4} />
+
+                  <Heading size="sm" mb={3}>
+                    Items to Deliver
+                  </Heading>
+                  <VStack spacing={4} align="stretch">
+                    {order.items && order.items.length > 0 ? (
+                      order.items.map((item) => (
+                        <Box
+                          key={item.itemId._id}
+                          p={4}
+                          borderWidth={1}
+                          borderRadius="md"
+                          bg={{ base: "gray.700", _light: "gray.50" }}
                         >
-                          Complete Order
-                        </Button>
-                      </Box>
-                    ))
-                  ) : (
-                    <Text>No items in this order.</Text>
-                  )}
-                </SimpleGrid>
-              </Box>
-            ))
-          ) : (
-            <Text color="white" fontSize="2xl">
-              No orders to deliver.
-            </Text>
-          )}
-        </SimpleGrid>
+                          <Text>
+                            <strong>Item:</strong>{" "}
+                            {item.itemId.name || "Unknown Item"}
+                          </Text>
+                          <Text>
+                            <strong>Price:</strong> ₹{item.itemId.price || "N/A"}
+                          </Text>
+                          <Button
+                            mt={4}
+                            colorScheme="teal"
+                            onClick={() => openModal(item)}
+                            w="full"
+                          >
+                            Complete Order
+                          </Button>
+                        </Box>
+                      ))
+                    ) : (
+                      <Text>No items in this order.</Text>
+                    )}
+                  </VStack>
+                </CardBody>
+              </Card>
+            ))}
+          </SimpleGrid>
+        ) : (
+          <Text fontSize="2xl">No orders to deliver.</Text>
+        )}
       </VStack>
+
+      {currentItem && (
+        <Modal isOpen={isOpen} onClose={onClose}>
+          <ModalOverlay />
+          <ModalContent>
+            <ModalHeader>Complete Order</ModalHeader>
+            <ModalCloseButton />
+            <ModalBody>
+              <Text>
+                <strong>Item:</strong>{" "}
+                {currentItem.itemId.name || "Unknown Item"}
+              </Text>
+              <Text>
+                <strong>Price:</strong> ₹{currentItem.itemId.price || "N/A"}
+              </Text>
+              <Input
+                mt={4}
+                type="text"
+                placeholder="Enter OTP"
+                value={otpInput[currentItem.itemId._id] || ""}
+                onChange={(e) =>
+                  setOtpInput({
+                    ...otpInput,
+                    [currentItem.itemId._id]: e.target.value,
+                  })
+                }
+              />
+            </ModalBody>
+
+            <ModalFooter>
+              <Button colorScheme="blue" mr={3} onClick={() => handleCompleteOrder(currentItem.itemId._id, currentItem.orderId)}>
+                Complete Order
+              </Button>
+              <Button variant="ghost" onClick={onClose}>
+                Cancel
+              </Button>
+            </ModalFooter>
+          </ModalContent>
+        </Modal>
+      )}
     </Container>
   );
 };

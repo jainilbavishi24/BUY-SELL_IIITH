@@ -20,6 +20,8 @@ import https from 'https';
 
 dotenv.config();
 
+console.log("JWT_SECRET at startup:", process.env.JWT_SECRET);
+
 const app = express();
 const PORT = 5000;
 
@@ -182,7 +184,14 @@ const casLoginCallback = async (req, res) => {
         contactNo: '0000000000',
         isNewUser: true,
         isProfileComplete: false, // CAS users need to complete their profile
+        sellerReviews: [], // Ensure sellerReviews is initialized properly
       });
+
+      // Validate required fields before saving
+      if (!user.fname || !user.lname || !user.email) {
+        throw new Error('Invalid user data from CAS response');
+      }
+
       await user.save();
     } else {
       // Update last login for existing users
@@ -192,7 +201,7 @@ const casLoginCallback = async (req, res) => {
 
     const token = jwt.sign(
       { userId: user._id },
-      "abc",
+      process.env.JWT_SECRET,
       { expiresIn: '24h' }
     );
 

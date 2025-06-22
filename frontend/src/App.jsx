@@ -8,6 +8,7 @@ import {
   useLocation,
 } from "react-router-dom";
 import theme from "./theme";
+import { AnimatePresence } from "framer-motion";
 
 import CreatePage from "./pages/CreatePage";
 import HomePage from "./pages/SearchPage";
@@ -132,68 +133,70 @@ function App() {
           <Navbar isAuth={isAuth} onLogout={logout} />
         )}
         <Box maxW="container.xl" mx="auto" px={4}>
-          <Routes>
-            <Route path="/login" element={<LoginPage onLogin={onLogin} />} />
-            <Route path="/signup" element={<SignupPage />} />
-            <Route
-              path="/auth/cas/callback"
-              element={<CASCallback onLogin={onLogin} />}
-            />
-            <Route
-              path="/"
-              element={
-                <ProtectedRoute element={<HomePage />} isAuth={isAuth} />
-              }
-            />
-            <Route
-              path="/create"
-              element={
-                <ProtectedRoute element={<CreatePage />} isAuth={isAuth} />
-              }
-            />
-            <Route
-              path="/my-cart"
-              element={
-                <ProtectedRoute element={<MyCartPage />} isAuth={isAuth} />
-              }
-            />
-            <Route
-              path="/profile"
-              element={
-                <ProtectedRoute element={<ProfilePage />} isAuth={isAuth} />
-              }
-            />
-            <Route
-              path="/my-items"
-              element={
-                <ProtectedRoute element={<MyItemsPage />} isAuth={isAuth} />
-              }
-            />
-            <Route
-              path="/item/:id"
-              element={
-                <ProtectedRoute element={<ItemPage />} isAuth={isAuth} />
-              }
-            />
-            <Route
-              path="/order-history"
-              element={
-                <ProtectedRoute
-                  element={<OrderHistoryPage />}
-                  isAuth={isAuth}
-                />
-              }
-            />
-            <Route
-              path="/deliver-items"
-              element={
-                <ProtectedRoute
-                  element={<DeliverItemsPage />}
-                  isAuth={isAuth}
-                />
-              }
-            />
-          </Routes>
+          <AnimatePresence mode="wait">
+            <Routes location={location} key={location.pathname}>
+              <Route path="/login" element={<LoginPage onLogin={onLogin} />} />
+              <Route path="/signup" element={<SignupPage />} />
+              <Route
+                path="/auth/cas/callback"
+                element={<CASCallback onLogin={onLogin} />}
+              />
+              <Route
+                path="/"
+                element={
+                  <ProtectedRoute element={<HomePage />} isAuth={isAuth} />
+                }
+              />
+              <Route
+                path="/create"
+                element={
+                  <ProtectedRoute element={<CreatePage />} isAuth={isAuth} />
+                }
+              />
+              <Route
+                path="/my-cart"
+                element={
+                  <ProtectedRoute element={<MyCartPage />} isAuth={isAuth} />
+                }
+              />
+              <Route
+                path="/profile"
+                element={
+                  <ProtectedRoute element={<ProfilePage />} isAuth={isAuth} />
+                }
+              />
+              <Route
+                path="/my-items"
+                element={
+                  <ProtectedRoute element={<MyItemsPage />} isAuth={isAuth} />
+                }
+              />
+              <Route
+                path="/item/:id"
+                element={
+                  <ProtectedRoute element={<ItemPage />} isAuth={isAuth} />
+                }
+              />
+              <Route
+                path="/order-history"
+                element={
+                  <ProtectedRoute
+                    element={<OrderHistoryPage />}
+                    isAuth={isAuth}
+                  />
+                }
+              />
+              <Route
+                path="/deliver-items"
+                element={
+                  <ProtectedRoute
+                    element={<DeliverItemsPage />}
+                    isAuth={isAuth}
+                  />
+                }
+              />
+            </Routes>
+          </AnimatePresence>
         </Box>
 
         {/* Floating ChatBot - only show when authenticated */}
