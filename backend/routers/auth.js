@@ -24,13 +24,6 @@
     }
 
     
-    if (!email.endsWith("iiit.ac.in")) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid email domain. Only 'iiit.ac.in' emails are allowed.",
-      });
-    }
-
     try {
     
       const existingUser = await User.findOne({ email });

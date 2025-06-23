@@ -14,8 +14,9 @@ import {
   IconButton,
   HStack,
   useColorMode,
+  Divider,
 } from "@chakra-ui/react";
-import { FaMoon, FaSun } from "react-icons/fa";
+import { FaMoon, FaSun, FaUserPlus, FaUniversity } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 
 const SignupPage = () => {
@@ -49,10 +50,6 @@ const SignupPage = () => {
         newErrors[key] = "This field is required";
       }
     });
-
-    if (formData.email && !formData.email.endsWith("iiit.ac.in")) {
-      newErrors.email = "Only IIIT email addresses are allowed";
-    }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -113,11 +110,8 @@ const SignupPage = () => {
 
   return (
     <Box
-      position="fixed"
-      top="0"
-      left="0"
-      right="0"
-      bottom="0"
+      w="100vw"
+      minh="100vh"
       display="flex"
       alignItems="center"
       justifyContent="center"
@@ -126,20 +120,24 @@ const SignupPage = () => {
       overflowY="auto"
     >
       <Box
-        w="100%"
-        maxW="500px"
+        maxW="450px"
         p={8}
         bg={useColorModeValue("white", "gray.800")}
         borderWidth={1}
-        borderColor={useColorModeValue("gray.200", "gray.600")}
-        borderRadius="xl"
+        borderColor={useColorModeValue("gray.200", "gray.700")}
+        borderRadius="2xl"
         boxShadow="2xl"
-        mx="auto"
-        my={4}
       >
-        <VStack spacing={6}>
+        <VStack spacing={6} align="stretch">
           <HStack w="full" justify="space-between" align="center">
-            <Heading color={useColorModeValue("gray.800", "white")} flex="1" textAlign="center">
+            <Heading
+              bgGradient="linear(to-r, blue.500, purple.400)"
+              bgClip="text"
+              fontSize={{ base: "2xl", md: "3xl" }}
+              fontWeight="extrabold"
+              flex="1"
+              textAlign="center"
+            >
               Create an Account
             </Heading>
             <IconButton
@@ -150,95 +148,100 @@ const SignupPage = () => {
               size="sm"
             />
           </HStack>
-        
-        <FormControl isInvalid={!!errors.fname} isRequired>
-          <FormLabel>First Name</FormLabel>
-          <Input
-            name="fname"
-            value={formData.fname}
-            onChange={handleInputChange}
-            borderWidth="2px"
-          />
-          <FormErrorMessage>{errors.fname}</FormErrorMessage>
-        </FormControl>
 
-        <FormControl isInvalid={!!errors.lname} isRequired>
-          <FormLabel>Last Name</FormLabel>
-          <Input
-            name="lname"
-            value={formData.lname}
-            onChange={handleInputChange}
-            borderWidth="2px"
-          />
-          <FormErrorMessage>{errors.lname}</FormErrorMessage>
-        </FormControl>
+          <VStack spacing={4} align="stretch">
+            <FormControl isInvalid={!!errors.fname} isRequired>
+              <FormLabel>First Name</FormLabel>
+              <Input
+                name="fname"
+                value={formData.fname}
+                onChange={handleInputChange}
+                borderWidth="2px"
+                size="md"
+                autoComplete="given-name"
+              />
+              <FormErrorMessage>{errors.fname}</FormErrorMessage>
+            </FormControl>
 
-        <FormControl isInvalid={!!errors.email} isRequired>
-          <FormLabel>Email</FormLabel>
-          <Input
-            name="email"
-            value={formData.email}
-            onChange={handleInputChange}
-            autoComplete="email"
-            list="email-suggestions"
-            borderWidth="2px"
-          />
-          <datalist id="email-suggestions">
-            <option value="@iiit.ac.in" />
-          </datalist>
-          <FormErrorMessage>{errors.email}</FormErrorMessage>
-        </FormControl>
+            <FormControl isInvalid={!!errors.lname} isRequired>
+              <FormLabel>Last Name</FormLabel>
+              <Input
+                name="lname"
+                value={formData.lname}
+                onChange={handleInputChange}
+                borderWidth="2px"
+                size="md"
+                autoComplete="family-name"
+              />
+              <FormErrorMessage>{errors.lname}</FormErrorMessage>
+            </FormControl>
 
-        <FormControl isInvalid={!!errors.age} isRequired>
-          <FormLabel>Age</FormLabel>
-          <Input
-            name="age"
-            type="number"
-            value={formData.age}
-            onChange={handleInputChange}
-            borderWidth="2px"
-          />
-          <FormErrorMessage>{errors.age}</FormErrorMessage>
-        </FormControl>
+            <FormControl isInvalid={!!errors.email} isRequired>
+              <FormLabel>Email</FormLabel>
+              <Input
+                name="email"
+                value={formData.email}
+                onChange={handleInputChange}
+                autoComplete="email"
+                borderWidth="2px"
+                size="md"
+              />
+              <FormErrorMessage>{errors.email}</FormErrorMessage>
+            </FormControl>
 
-        <FormControl isInvalid={!!errors.contactNo} isRequired>
-          <FormLabel>Contact Number</FormLabel>
-          <Input
-            name="contactNo"
-            value={formData.contactNo}
-            onChange={handleInputChange}
-            borderWidth="2px"
-          />
-          <FormErrorMessage>{errors.contactNo}</FormErrorMessage>
-        </FormControl>
+            <FormControl isInvalid={!!errors.age} isRequired>
+              <FormLabel>Age</FormLabel>
+              <Input
+                name="age"
+                type="number"
+                value={formData.age}
+                onChange={handleInputChange}
+                borderWidth="2px"
+                size="md"
+              />
+              <FormErrorMessage>{errors.age}</FormErrorMessage>
+            </FormControl>
 
-        <FormControl isInvalid={!!errors.password} isRequired>
-          <FormLabel>Password </FormLabel>
-          <Input
-            name="password"
-            type="password"
-            value={formData.password}
-            onChange={handleInputChange}
-            autoComplete="new-password"
-            borderWidth="2px"
-          />
-          <FormErrorMessage>{errors.password}</FormErrorMessage>
-        </FormControl>
+            <FormControl isInvalid={!!errors.contactNo} isRequired>
+              <FormLabel>Contact Number</FormLabel>
+              <Input
+                name="contactNo"
+                value={formData.contactNo}
+                onChange={handleInputChange}
+                borderWidth="2px"
+                size="md"
+                autoComplete="tel"
+              />
+              <FormErrorMessage>{errors.contactNo}</FormErrorMessage>
+            </FormControl>
 
-        <Button colorScheme="teal" onClick={handleSignup} w="full">
-          Sign Up
-        </Button>
+            <FormControl isInvalid={!!errors.password} isRequired>
+              <FormLabel>Password</FormLabel>
+              <Input
+                name="password"
+                type="password"
+                value={formData.password}
+                onChange={handleInputChange}
+                borderWidth="2px"
+                size="md"
+                autoComplete="new-password"
+              />
+              <FormErrorMessage>{errors.password}</FormErrorMessage>
+            </FormControl>
+          </VStack>
 
-        <Text>
-          Already have an account?{" "}
-          <Button 
-            onClick={() => navigate("/login")} 
-            variant="link" 
-            colorScheme="teal"
+          <Button
+            leftIcon={<FaUserPlus />}
+            colorScheme="blue"
+            size="lg"
+            w="full"
+            mt={2}
+            fontWeight="bold"
+            onClick={handleSignup}
+            boxShadow="md"
           >
-            Log In
+            Sign Up
           </Button>
-        </Text>
         </VStack>
       </Box>
     </Box>
