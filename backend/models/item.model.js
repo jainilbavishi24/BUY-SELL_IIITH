@@ -30,6 +30,10 @@ const itemSchema = new mongoose.Schema({
     type: Boolean,
     default: true,
   },
+  cartedAt: {
+    type: Date,
+    default: null,
+  },
 });
 
 const Item = mongoose.model("Item", itemSchema);

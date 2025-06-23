@@ -23,6 +23,7 @@ import {
   Box
 } from "@chakra-ui/react";
 import { CopyIcon } from "@chakra-ui/icons";
+import { FaRupeeSign } from "react-icons/fa";
 
 const MyCartPage = () => {
   const [cartItems, setCartItems] = useState([]);
@@ -186,9 +187,11 @@ const MyCartPage = () => {
       const data = await res.json();
 
       if (data.success) {
-        setCartItems((prevItems) =>
-          prevItems.filter((item) => item._id !== itemId)
-        );
+        setCartItems((prevItems) => {
+          const updated = prevItems.filter((item) => item._id !== itemId);
+          setTotalCost(updated.reduce((acc, item) => acc + item.price, 0));
+          return updated;
+        });
         toast({
           title: "Removed",
           description: "Item has been removed from your cart.",
@@ -232,7 +235,7 @@ const MyCartPage = () => {
                 <Heading as="h3" size="lg">
                   {item.name}
                 </Heading>
-                <Text fontSize="lg">${item.price}</Text>
+                <Text fontSize="lg"><FaRupeeSign style={{display:'inline', marginRight: 2}} />{item.price}</Text>
                 <Button
                   colorScheme="red"
                   onClick={() => removeFromCart(item._id)}
@@ -246,7 +249,7 @@ const MyCartPage = () => {
           )}
         </SimpleGrid>
         <Text fontSize="2xl" fontWeight="bold">
-          Total Cost: ${totalCost}
+          Total Cost: <FaRupeeSign style={{display:'inline', marginRight: 2}} />{totalCost}
         </Text>
         <Button colorScheme="teal" onClick={handleOrder}>
           Final Order

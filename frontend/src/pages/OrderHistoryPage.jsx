@@ -54,7 +54,7 @@ const OrderHistoryPage = () => {
         return;
       }
 
-      try {
+    try {
         const [buyerRes, sellerRes] = await Promise.all([
           fetch(`/api/order/history?userId=${userId}`, {
             headers: { 'Authorization': `Bearer ${token}` }
@@ -74,16 +74,16 @@ const OrderHistoryPage = () => {
         const sellerData = await sellerRes.json();
         if (sellerData.success) {
           const filteredOrders = sellerData.orders
-            .map((order) => ({
-              ...order,
-              items: order.items.filter((item) => item.sellerID === userId),
-            }))
-            .filter((order) => order.items.length > 0);
-          setSellerOrders(filteredOrders);
-        } else {
+          .map((order) => ({
+            ...order,
+            items: order.items.filter((item) => item.sellerID === userId),
+          }))
+          .filter((order) => order.items.length > 0);
+        setSellerOrders(filteredOrders);
+      } else {
           toast({ title: "Error fetching your sales", description: sellerData.message, status: "warning", duration: 3000, isClosable: true });
-        }
-      } catch (error) {
+      }
+    } catch (error) {
         toast({ title: "Error fetching orders", description: "A network error occurred.", status: "error", duration: 3000, isClosable: true });
       } finally {
         setLoading(false);
@@ -92,6 +92,33 @@ const OrderHistoryPage = () => {
 
     fetchOrders();
   }, [userId, toast]);
+
+  const handleCancelPurchase = async (orderId, itemId) => {
+    try {
+      const res = await fetch(`/api/order/order/${orderId}/cancel-item`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+        },
+        body: JSON.stringify({ itemId }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast({ title: "Purchase cancelled", status: "success" });
+        // Refresh orders
+        setOrders((prev) => prev.map(order =>
+          order._id === orderId
+            ? { ...order, items: order.items.map(item => item.itemId === itemId ? { ...item, status: "Cancelled" } : item) }
+            : order
+        ));
+      } else {
+        toast({ title: "Error", description: data.message, status: "error" });
+      }
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to cancel purchase.", status: "error" });
+    }
+  };
 
   const renderSkeletons = () => (
     [...Array(3)].map((_, i) => (
@@ -113,16 +140,16 @@ const OrderHistoryPage = () => {
     // Determine order status: if all items are completed, show 'Completed', else 'Pending'
     const allCompleted = order.items.every(item => item.status === 'Completed');
     const orderStatus = allCompleted ? 'Completed' : 'Pending';
-    return (
+  return (
       <Card key={order._id} width="100%" mt={4} variant="outline">
         <CardBody>
           <Stack spacing="3">
             <Heading size='sm'>Order ID: {(order.transactionID || order._id).slice(0, 12)}...</Heading>
             <Divider />
-            {order.items.map(item => (
-                <Flex key={item._id || item.itemId._id} justify="space-between" align="center">
+            {order.items.map((item, idx) => (
+                <Flex key={item._id || (item.itemId && item.itemId._id) || item.itemId || idx} justify="space-between" align="center">
                     <Text>{item.name || item.itemId.name}</Text>
-                    <HStack>
+        <HStack>
                       <Icon as={FaRupeeSign} />
                       <Text>{item.price || item.itemId.price}</Text>
                       {/* Show OTP if order/item is not completed */}
@@ -131,7 +158,13 @@ const OrderHistoryPage = () => {
                           OTP: {JSON.parse(localStorage.getItem(`otp_${item.itemId || item.itemId._id}`)).otp}
                         </Box>
                       )}
-                    </HStack>
+                      {/* Cancel Purchase button for pending items */}
+                      {item.status === 'Pending' && (
+                        <Button ml={4} colorScheme="red" size="sm" onClick={() => handleCancelPurchase(order._id, item.itemId._id || item.itemId)}>
+                          Cancel Purchase
+                            </Button>
+                          )}
+                            </HStack>
                 </Flex>
             ))}
             <Divider />

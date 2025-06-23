@@ -19,6 +19,7 @@ import {
   FaTruck,
   FaMoon,
   FaSun,
+  FaBoxOpen
 } from "react-icons/fa";
 import { CgProfile } from "react-icons/cg";
 
@@ -111,27 +112,30 @@ const Navbar = ({ isAuth, onLogout }) => {
             <HStack spacing={3} alignItems="center" flex={1} justify="center">
               {[
                 { to: "/create", icon: FaPlus, text: "Create" },
+                { to: "/my-items", icon: FaBoxOpen, text: "My Items" },
                 { to: "/my-cart", icon: FaShoppingCart, text: "Cart" },
                 { to: "/order-history", icon: FaHistory, text: "Orders" },
                 { to: "/deliver-items", icon: FaTruck, text: "Deliver" },
                 { to: "/profile", icon: CgProfile, text: "Profile" },
               ].map(({ to, icon: Icon, text }) => (
                 <Link to={to} key={to}>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    px={3}
-                    _hover={{
-                      bg: useColorModeValue("gray.100", "gray.700"),
-                      transform: "translateY(-1px)",
-                    }}
-                    transition="all 0.2s"
-                  >
-                    <Icon />
-                    <Text ml={2} display={{ base: "none", lg: "block" }} fontSize="sm">
-                      {text}
-                    </Text>
-                  </Button>
+                  <Tooltip label={text} placement="bottom">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      px={3}
+                      _hover={{
+                        bg: useColorModeValue("gray.100", "gray.700"),
+                        transform: "translateY(-1px)",
+                      }}
+                      transition="all 0.2s"
+                    >
+                      <Icon />
+                      <Text ml={2} display={{ base: "none", lg: "block" }} fontSize="sm">
+                        {text}
+                      </Text>
+                    </Button>
+                  </Tooltip>
                 </Link>
               ))}
             </HStack>

@@ -42,6 +42,8 @@ const SearchPage = () => {
   const accentColor = useColorModeValue("blue.500", "blue.300");
 
   useEffect(() => {
+    // Relist expired carted items on every marketplace load
+    fetch("/api/user/relist-expired-carted-items", { method: "POST" });
     const fetchItems = async () => {
       try {
         const res = await fetch("/api/items");

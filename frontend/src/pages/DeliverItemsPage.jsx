@@ -32,8 +32,16 @@ const DeliverItemsPage = () => {
   const toast = useToast();
 
   useEffect(() => {
-    fetchSellerOrders();
+    expirePendingOrders().then(fetchSellerOrders);
   }, [sellerID]);
+
+  const expirePendingOrders = async () => {
+    try {
+      await fetch("/api/order/expire-pending", { method: "POST" });
+    } catch (error) {
+      // Ignore errors for now
+    }
+  };
 
   const fetchSellerOrders = async () => {
     if (!sellerID) {
@@ -157,80 +165,80 @@ const DeliverItemsPage = () => {
       <VStack spacing={8}>
         <Heading as="h1">Deliver Items</Heading>
         {orders.length > 0 ? (
-          <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={10} w="full">
+        <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={10} w="full">
             {orders.map((order) => (
               <Card key={order._id} borderWidth={1} borderRadius="md" boxShadow="md">
                 <CardBody>
-                  <Heading size="md">Order ID: {order._id}</Heading>
-                  <Text mt={2} fontSize="lg">
+                <Heading size="md">Order ID: {order._id}</Heading>
+                <Text mt={2} fontSize="lg">
                     Amount: ₹{order.amount}
-                  </Text>
+                </Text>
 
-                  <Divider my={4} />
-                  <Heading size="sm" mb={3}>
-                    Buyer Details
-                  </Heading>
-                  <Flex direction="column" gap={2}>
-                    {order.userId ? (
-                      <>
-                        <Text>
-                          <strong>Name:</strong> {order.userId.fname}{" "}
-                          {order.userId.lname}
-                        </Text>
-                        <Text>
-                          <strong>Email:</strong> {order.userId.email}
-                        </Text>
-                        <Text>
-                          <strong>Contact:</strong> {order.userId.contactNo}
-                        </Text>
-                      </>
-                    ) : (
-                      <Text color="red">Buyer information not available</Text>
-                    )}
-                  </Flex>
-                  <Divider my={4} />
+                <Divider my={4} />
+                <Heading size="sm" mb={3}>
+                  Buyer Details
+                </Heading>
+                <Flex direction="column" gap={2}>
+                  {order.userId ? (
+                    <>
+                      <Text>
+                        <strong>Name:</strong> {order.userId.fname}{" "}
+                        {order.userId.lname}
+                      </Text>
+                      <Text>
+                        <strong>Email:</strong> {order.userId.email}
+                      </Text>
+                      <Text>
+                        <strong>Contact:</strong> {order.userId.contactNo}
+                      </Text>
+                    </>
+                  ) : (
+                    <Text color="red">Buyer information not available</Text>
+                  )}
+                </Flex>
+                <Divider my={4} />
 
                   <Heading size="sm" mb={3}>
                     Items to Deliver
                   </Heading>
                   <VStack spacing={4} align="stretch">
-                    {order.items && order.items.length > 0 ? (
-                      order.items.map((item) => (
-                        <Box
-                          key={item.itemId._id}
-                          p={4}
-                          borderWidth={1}
-                          borderRadius="md"
+                  {order.items && order.items.length > 0 ? (
+                    order.items.map((item) => (
+                      <Box
+                        key={item.itemId._id}
+                        p={4}
+                        borderWidth={1}
+                        borderRadius="md"
                           bg={{ base: "gray.700", _light: "gray.50" }}
-                        >
-                          <Text>
-                            <strong>Item:</strong>{" "}
-                            {item.itemId.name || "Unknown Item"}
-                          </Text>
-                          <Text>
+                      >
+                        <Text>
+                          <strong>Item:</strong>{" "}
+                          {item.itemId.name || "Unknown Item"}
+                        </Text>
+                        <Text>
                             <strong>Price:</strong> ₹{item.itemId.price || "N/A"}
-                          </Text>
-                          <Button
+                        </Text>
+                        <Button
                             mt={4}
-                            colorScheme="teal"
+                          colorScheme="teal"
                             onClick={() => openModal(item)}
-                            w="full"
-                          >
-                            Complete Order
-                          </Button>
-                        </Box>
-                      ))
-                    ) : (
-                      <Text>No items in this order.</Text>
-                    )}
+                          w="full"
+                        >
+                          Complete Order
+                        </Button>
+                      </Box>
+                    ))
+                  ) : (
+                    <Text>No items in this order.</Text>
+                  )}
                   </VStack>
                 </CardBody>
               </Card>
             ))}
-          </SimpleGrid>
-        ) : (
+                </SimpleGrid>
+          ) : (
           <Text fontSize="2xl">No orders to deliver.</Text>
-        )}
+          )}
       </VStack>
 
       {currentItem && (

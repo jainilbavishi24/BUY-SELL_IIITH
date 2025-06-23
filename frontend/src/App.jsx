@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, createContext } from "react";
 import { Box, ChakraProvider } from "@chakra-ui/react";
 import {
   Route,
@@ -9,6 +9,8 @@ import {
 } from "react-router-dom";
 import theme from "./theme";
 import { AnimatePresence } from "framer-motion";
+import { io } from "socket.io-client";
+import { useToast } from "@chakra-ui/react";
 
 import CreatePage from "./pages/CreatePage";
 import HomePage from "./pages/SearchPage";
@@ -23,7 +25,12 @@ import OrderHistoryPage from "./pages/OrderHistoryPage";
 import DeliverItemsPage from "./pages/DeliverItemsPage";
 import FloatingChatBot from "./components/FloatingChatBot";
 
-
+export const ChatContext = createContext({
+  isUserChatOpen: false,
+  setIsUserChatOpen: () => {},
+  activeConversationId: null,
+  setActiveConversationId: () => {},
+});
 
 function ProtectedRoute({ element, isAuth }) {
   const location = useLocation();
@@ -100,6 +107,13 @@ function App() {
     return !!localStorage.getItem("authToken");
   });
 
+  const [socket, setSocket] = useState(null);
+  const [lastMessage, setLastMessage] = useState(null);
+  const toast = useToast();
+  const [isUserChatOpen, setIsUserChatOpen] = useState(false);
+  const [activeConversationId, setActiveConversationId] = useState(null);
+  const [notificationPreview, setNotificationPreview] = useState(null);
+
   useEffect(() => {
     const handleStorageChange = () => {
       setIsAuth(!!localStorage.getItem("authToken"));
@@ -111,6 +125,31 @@ function App() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!isAuth) return;
+    const s = io("http://localhost:5000", {
+      auth: { token: localStorage.getItem("authToken") },
+      transports: ["websocket"]
+    });
+    setSocket(s);
+    s.on("chat:message", (msg) => {
+      setLastMessage(msg);
+      // If chat modal is not open or not focused on this conversation, show custom notification
+      if (!isUserChatOpen || activeConversationId !== msg.conversationId) {
+        setNotificationPreview({
+          conversationId: msg.conversationId,
+          text: msg.text || msg.content,
+          sender: msg.sender && (msg.sender.fname || msg.sender.email || "User"),
+        });
+      }
+    });
+    return () => s.disconnect();
+  }, [isAuth, isUserChatOpen, activeConversationId]);
+
+  useEffect(() => {
+    if (isUserChatOpen) setNotificationPreview(null);
+  }, [isUserChatOpen]);
+
   const onLogin = () => {
     setIsAuth(true);
   };
@@ -121,87 +160,130 @@ function App() {
     setIsAuth(false);
   };
 
+  const handleNotificationClick = (convId) => {
+    setIsUserChatOpen(true);
+    setActiveConversationId(convId);
+    setNotificationPreview(null);
+  };
+
   return (
     <ChakraProvider theme={theme}>
-      <Box
-        minH={"100vh"}
-        position="relative"
-        overflowX="auto"
-        whiteSpace="nowrap"
-      >
-        {!hideNavbarRoutes.includes(location.pathname) && (
-          <Navbar isAuth={isAuth} onLogout={logout} />
-        )}
-        <Box maxW="container.xl" mx="auto" px={4}>
-          <AnimatePresence mode="wait">
-            <Routes location={location} key={location.pathname}>
-              <Route path="/login" element={<LoginPage onLogin={onLogin} />} />
-              <Route path="/signup" element={<SignupPage />} />
-              <Route
-                path="/auth/cas/callback"
-                element={<CASCallback onLogin={onLogin} />}
-              />
-              <Route
-                path="/"
-                element={
-                  <ProtectedRoute element={<HomePage />} isAuth={isAuth} />
-                }
-              />
-              <Route
-                path="/create"
-                element={
-                  <ProtectedRoute element={<CreatePage />} isAuth={isAuth} />
-                }
-              />
-              <Route
-                path="/my-cart"
-                element={
-                  <ProtectedRoute element={<MyCartPage />} isAuth={isAuth} />
-                }
-              />
-              <Route
-                path="/profile"
-                element={
-                  <ProtectedRoute element={<ProfilePage />} isAuth={isAuth} />
-                }
-              />
-              <Route
-                path="/my-items"
-                element={
-                  <ProtectedRoute element={<MyItemsPage />} isAuth={isAuth} />
-                }
-              />
-              <Route
-                path="/item/:id"
-                element={
-                  <ProtectedRoute element={<ItemPage />} isAuth={isAuth} />
-                }
-              />
-              <Route
-                path="/order-history"
-                element={
-                  <ProtectedRoute
-                    element={<OrderHistoryPage />}
-                    isAuth={isAuth}
-                  />
-                }
-              />
-              <Route
-                path="/deliver-items"
-                element={
-                  <ProtectedRoute
-                    element={<DeliverItemsPage />}
-                    isAuth={isAuth}
-                  />
-                }
-              />
-            </Routes>
-          </AnimatePresence>
-        </Box>
+      <ChatContext.Provider value={{
+        isUserChatOpen,
+        setIsUserChatOpen,
+        activeConversationId,
+        setActiveConversationId
+      }}>
+        <Box
+          minH={"100vh"}
+          position="relative"
+          overflowX="auto"
+          whiteSpace="nowrap"
+        >
+          {!hideNavbarRoutes.includes(location.pathname) && (
+            <Navbar isAuth={isAuth} onLogout={logout} />
+          )}
+          <Box maxW="container.xl" mx="auto" px={4}>
+            <AnimatePresence mode="wait">
+              <Routes location={location} key={location.pathname}>
+                <Route path="/login" element={<LoginPage onLogin={onLogin} />} />
+                <Route path="/signup" element={<SignupPage />} />
+                <Route
+                  path="/auth/cas/callback"
+                  element={<CASCallback onLogin={onLogin} />}
+                />
+                <Route
+                  path="/"
+                  element={
+                    <ProtectedRoute element={<HomePage />} isAuth={isAuth} />
+                  }
+                />
+                <Route
+                  path="/create"
+                  element={
+                    <ProtectedRoute element={<CreatePage />} isAuth={isAuth} />
+                  }
+                />
+                <Route
+                  path="/my-cart"
+                  element={
+                    <ProtectedRoute element={<MyCartPage />} isAuth={isAuth} />
+                  }
+                />
+                <Route
+                  path="/profile"
+                  element={
+                    <ProtectedRoute element={<ProfilePage />} isAuth={isAuth} />
+                  }
+                />
+                <Route
+                  path="/my-items"
+                  element={
+                    <ProtectedRoute element={<MyItemsPage />} isAuth={isAuth} />
+                  }
+                />
+                <Route
+                  path="/item/:id"
+                  element={
+                    <ProtectedRoute element={<ItemPage />} isAuth={isAuth} />
+                  }
+                />
+                <Route
+                  path="/order-history"
+                  element={
+                    <ProtectedRoute
+                      element={<OrderHistoryPage />}
+                      isAuth={isAuth}
+                    />
+                  }
+                />
+                <Route
+                  path="/deliver-items"
+                  element={
+                    <ProtectedRoute
+                      element={<DeliverItemsPage />}
+                      isAuth={isAuth}
+                    />
+                  }
+                />
+              </Routes>
+            </AnimatePresence>
+          </Box>
 
-        {/* Floating ChatBot - only show when authenticated */}
-        {isAuth && <FloatingChatBot />}
-      </Box>
+          {/* Floating ChatBot - only show when authenticated */}
+          {isAuth && (
+            <FloatingChatBot
+              socket={socket}
+              isUserChatOpen={isUserChatOpen}
+              setIsUserChatOpen={setIsUserChatOpen}
+              activeConversationId={activeConversationId}
+              setActiveConversationId={setActiveConversationId}
+            />
+          )}
+
+          {/* Custom Notification Preview */}
+          {notificationPreview && !isUserChatOpen && (
+            <Box
+              position="fixed"
+              bottom="30px"
+              left="30px"
+              zIndex={2000}
+              bg="white"
+              color="black"
+              p={4}
+              borderRadius="lg"
+              boxShadow="xl"
+              cursor="pointer"
+              minW="250px"
+              maxW="350px"
+              onClick={() => handleNotificationClick(notificationPreview.conversationId)}
+            >
+              <strong>{notificationPreview.sender}</strong>
+              <Box>{notificationPreview.text}</Box>
+            </Box>
+          )}
+        </Box>
+      </ChatContext.Provider>
     </ChakraProvider>
   );
 }

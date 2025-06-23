@@ -13,10 +13,11 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 
 import xml2js from 'xml2js';
 import https from 'https';
-
-
-
-
+import chatRouter from "./routers/chat.js";
+import http from "http";
+import { Server as SocketIOServer } from "socket.io";
+import Message from "./models/message.model.js";
+import Conversation from "./models/conversation.model.js";
 
 dotenv.config();
 
@@ -35,7 +36,7 @@ app.use("/api/orders", router);
 app.use("/api/users", router);
 app.use("/api/seller",userRouter);
 app.use("/api/reviews",userRouter);
-
+app.use("/api/chat", chatRouter);
 
 app.post('/api/auth/cas-validate', async (req, res) => {
   const { ticket, service } = req.body;
@@ -65,8 +66,6 @@ app.post('/api/auth/cas-validate', async (req, res) => {
     res.status(500).json({ success: false, message: "Internal server error" });
   }
 });
-
-
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
 
@@ -127,6 +126,7 @@ app.post('/api/chatbot', async (req, res) => {
     });
   }
 });
+
 const casLoginCallback = async (req, res) => {
   const ticket = req.query.ticket;
 
@@ -213,15 +213,13 @@ const casLoginCallback = async (req, res) => {
     res.redirect(`http://localhost:5173/login?error=${encodeURIComponent(error.message)}`);
   }
 };
-app.get('/api/auth/cas/callback', casLoginCallback);
 
+app.get('/api/auth/cas/callback', casLoginCallback);
 
 const handleLogout = async (_req, res) => {
   try {
-
     const serviceURL = encodeURIComponent('http://localhost:5173/login');
     const casLogoutUrl = `https://login.iiit.ac.in/cas/logout?service=${serviceURL}`;
-    
 
     res.json({ casLogoutUrl });
   } catch (error) {
@@ -232,8 +230,55 @@ const handleLogout = async (_req, res) => {
 
 app.post('/api/auth/logout', handleLogout);
 
+const server = http.createServer(app);
+const io = new SocketIOServer(server, {
+  cors: {
+    origin: "http://localhost:5173", // or "*" for dev
+    methods: ["GET", "POST"],
+    credentials: true
+  }
+});
 
-app.listen(PORT, () => {
+// Example Socket.IO event handlers
+io.on("connection", (socket) => {
+  console.log("Socket connected:", socket.id);
+
+  socket.on("chat:message", async (msg) => {
+    try {
+      // Save message to DB
+      const newMessage = new Message({
+        conversationId: msg.conversationId,
+        sender: msg.sender,
+        text: msg.text,
+      });
+      await newMessage.save();
+
+      // Update conversation's lastMessage and updatedAt
+      await Conversation.findByIdAndUpdate(msg.conversationId, {
+        lastMessage: newMessage._id,
+        updatedAt: new Date()
+      });
+
+      // Populate sender for frontend display
+      const populatedMsg = await Message.findById(newMessage._id).populate("sender", "_id fname email");
+
+      // Emit to all clients (or to room if you want privacy)
+      io.emit("chat:message", {
+        ...populatedMsg.toObject(),
+        conversationId: msg.conversationId
+      });
+    } catch (err) {
+      console.error("Error handling chat:message:", err);
+    }
+  });
+
+  socket.on("disconnect", () => {
+    console.log("Socket disconnected:", socket.id);
+  });
+});
+
+// Start the server
+server.listen(PORT, () => {
   connectDB();
   console.log(`Server running on port ${PORT}`);
 });

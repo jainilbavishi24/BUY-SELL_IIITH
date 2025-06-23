@@ -78,6 +78,12 @@ userRouter.post("/:id/cart", authenticateUser, async (req, res) => {
     if (!item) {
       return res.status(404).json({ success: false, message: "Item not found." });
     }
+    if (!item.isActive) {
+      return res.status(400).json({ success: false, message: "Item is no longer available." });
+    }
+    if (item.sellerID.toString() === id) {
+      return res.status(400).json({ success: false, message: "You cannot add your own item to the cart." });
+    }
 
     const user = await User.findById(id);
     if (!user) {
@@ -86,6 +92,10 @@ userRouter.post("/:id/cart", authenticateUser, async (req, res) => {
 
     user.cart.push(item._id);
     await user.save();
+    // Mark item as inactive and set cartedAt
+    item.isActive = false;
+    item.cartedAt = new Date();
+    await item.save();
 
     res.json({ success: true, message: "Item added to cart.", cart: user.cart });
   } catch (error) {
@@ -112,6 +122,13 @@ userRouter.delete("/cart", authenticateUser, async (req, res) => {
     // Remove item from cart
     user.cart = user.cart.filter((cartItemId) => cartItemId.toString() !== itemId);
     await user.save();
+    // Mark item as active and clear cartedAt
+    const item = await Item.findById(itemId);
+    if (item) {
+      item.isActive = true;
+      item.cartedAt = null;
+      await item.save();
+    }
 
     res.json({ success: true, message: "Item removed from cart.", cart: user.cart });
   } catch (error) {
@@ -270,6 +287,13 @@ userRouter.post("/checkout", authenticateUser, async (req, res) => {
 
     if (!userId || !items || !items.length) {
       return res.status(400).json({ success: false, message: "Invalid order data." });
+    }
+
+    // Check all items are active
+    const itemDocs = await Item.find({ _id: { $in: items.map(i => i._id) } });
+    const inactiveItem = itemDocs.find(item => !item.isActive);
+    if (inactiveItem) {
+      return res.status(400).json({ success: false, message: `Item '${inactiveItem.name}' is no longer available.` });
     }
 
     const otpDetails = await Promise.all(
@@ -702,6 +726,7 @@ userRouter.get("/:sellerID", async (req, res) => {
     return res.json({
       success: true,
       data: {
+        _id: vendor._id,
         fname: vendor.fname,
         lname: vendor.lname,
         email: vendor.email,
@@ -772,6 +797,138 @@ userRouter.post("/:orderId/complete", authenticateUser, async (req, res) => {
     res.json({ success: true, message: "Order completed successfully" });
   } catch (error) {
     res.status(500).json({ message: "Server error" });
+  }
+});
+
+// Expire pending order items with expired OTPs and re-list items
+userRouter.post("/expire-pending", async (req, res) => {
+  try {
+    const now = new Date();
+    // Find all orders with at least one pending item with expired OTP
+    const orders = await Order.find({ "items.status": "Pending", "items.otpExpiration": { $lt: now } });
+    let expiredCount = 0;
+    for (const order of orders) {
+      let updated = false;
+      for (const item of order.items) {
+        if (item.status === "Pending" && item.otpExpiration < now) {
+          // Mark item as available again
+          await Item.findByIdAndUpdate(item.itemId, { isActive: true });
+          item.status = "Expired";
+          updated = true;
+          expiredCount++;
+        }
+      }
+      if (updated) await order.save();
+    }
+    res.json({ success: true, expiredCount });
+  } catch (error) {
+    console.error("Error expiring pending orders:", error);
+    res.status(500).json({ success: false, message: "Failed to expire pending orders." });
+  }
+});
+
+// Seller unlists (removes) their item
+userRouter.post("/item/:itemId/unlist", authenticateUser, async (req, res) => {
+  const { itemId } = req.params;
+  const userId = req.user.userId;
+  try {
+    const item = await Item.findById(itemId);
+    if (!item) {
+      return res.status(404).json({ success: false, message: "Item not found." });
+    }
+    if (item.sellerID.toString() !== userId) {
+      return res.status(403).json({ success: false, message: "Unauthorized: You are not the seller of this item." });
+    }
+    item.isActive = false;
+    await item.save();
+    res.json({ success: true, message: "Item unlisted successfully." });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Failed to unlist item." });
+  }
+});
+
+// Buyer cancels a pending purchase (order item)
+userRouter.post("/order/:orderId/cancel-item", authenticateUser, async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const { itemId } = req.body;
+    const userId = req.user.userId;
+    const order = await Order.findById(orderId);
+    if (!order) {
+      return res.status(404).json({ success: false, message: "Order not found." });
+    }
+    if (order.userId.toString() !== userId) {
+      return res.status(403).json({ success: false, message: "Unauthorized: Not your order." });
+    }
+    const item = order.items.find(i => i.itemId.toString() === itemId && i.status === "Pending");
+    if (!item) {
+      return res.status(400).json({ success: false, message: "Item not found or not pending." });
+    }
+    item.status = "Cancelled";
+    await Item.findByIdAndUpdate(itemId, { isActive: true });
+    await order.save();
+    res.json({ success: true, message: "Purchase cancelled and item re-listed." });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Failed to cancel purchase." });
+  }
+});
+
+// Seller relists their item
+userRouter.post("/item/:itemId/relist", authenticateUser, async (req, res) => {
+  try {
+    const { itemId } = req.params;
+    const userId = req.user.userId;
+    const item = await Item.findById(itemId);
+    if (!item) {
+      return res.status(404).json({ success: false, message: "Item not found." });
+    }
+    if (item.sellerID.toString() !== userId) {
+      return res.status(403).json({ success: false, message: "Unauthorized: You are not the seller of this item." });
+    }
+    item.isActive = true;
+    await item.save();
+    res.json({ success: true, message: "Item relisted successfully." });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Failed to relist item." });
+  }
+});
+
+userRouter.delete("/item/:itemId", authenticateUser, async (req, res) => {
+  const { itemId } = req.params;
+  const userId = req.user.userId;
+  try {
+    const item = await Item.findById(itemId);
+    if (!item) {
+      return res.status(404).json({ success: false, message: "Item not found." });
+    }
+    if (item.sellerID.toString() !== userId) {
+      return res.status(403).json({ success: false, message: "Unauthorized: You are not the seller of this item." });
+    }
+    await item.deleteOne();
+    res.json({ success: true, message: "Item deleted successfully." });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Failed to delete item." });
+  }
+});
+
+// Relist items that have been in a cart for more than 10 minutes
+userRouter.post("/relist-expired-carted-items", async (req, res) => {
+  try {
+    const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
+    const items = await Item.find({ isActive: false, cartedAt: { $lt: tenMinutesAgo } });
+    let relistedCount = 0;
+    for (const item of items) {
+      // Check if item is still in any user's cart
+      const userWithItem = await User.findOne({ cart: item._id });
+      if (userWithItem) continue; // Still in someone's cart, skip
+      item.isActive = true;
+      item.cartedAt = null;
+      await item.save();
+      relistedCount++;
+    }
+    res.json({ success: true, relistedCount });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Failed to relist expired carted items." });
   }
 });
 
