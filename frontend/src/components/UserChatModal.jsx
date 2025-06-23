@@ -20,7 +20,9 @@ import {
   Flex,
   Button,
   Heading,
-  useDisclosure
+  useDisclosure,
+  Avatar,
+  Divider
 } from "@chakra-ui/react";
 import { Send } from "lucide-react";
 
@@ -180,46 +182,55 @@ const UserChatModal = ({ isOpen, onClose, socket, activeConversationId, setActiv
                 </Button>
               </HStack>
               {showUserList ? (
-                <List spacing={2}>
+                <List spacing={0}>
                   {allUsers.length === 0 && <Text color="gray.500">No users found.</Text>}
-                  {allUsers.map((user) => (
-                    <ListItem
-                      key={user._id}
-                      p={2}
-                      borderRadius="md"
-                      bg="gray.50"
-                      cursor="pointer"
-                      _hover={{ bg: "blue.50" }}
-                      onClick={async () => {
-                        // Start or open conversation
-                        setShowUserList(false);
-                        setIsLoading(true);
-                        try {
-                          const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/chat/conversations`, {
-                            method: "POST",
-                            headers: {
-                              "Content-Type": "application/json",
-                              Authorization: `Bearer ${token}`,
-                            },
-                            body: JSON.stringify({ participantId: user._id }),
-                          });
-                          const data = await res.json();
-                          if (data.success && data.conversation) {
-                            fetchConversations();
-                            setSelectedConv(data.conversation);
-                          } else {
+                  {allUsers.map((user, idx) => (
+                    <React.Fragment key={user._id}>
+                      <ListItem
+                        p={3}
+                        borderRadius="lg"
+                        bg="white"
+                        boxShadow="sm"
+                        mb={2}
+                        cursor="pointer"
+                        _hover={{ bg: "blue.50", boxShadow: "md", transform: "scale(1.02)" }}
+                        display="flex"
+                        alignItems="center"
+                        gap={3}
+                        onClick={async () => {
+                          setShowUserList(false);
+                          setIsLoading(true);
+                          try {
+                            const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/chat/conversations`, {
+                              method: "POST",
+                              headers: {
+                                "Content-Type": "application/json",
+                                Authorization: `Bearer ${token}`,
+                              },
+                              body: JSON.stringify({ participantId: user._id }),
+                            });
+                            const data = await res.json();
+                            if (data.success && data.conversation) {
+                              fetchConversations();
+                              setSelectedConv(data.conversation);
+                            } else {
+                              toast({ title: "Failed to start chat", status: "error" });
+                            }
+                          } catch (e) {
                             toast({ title: "Failed to start chat", status: "error" });
+                          } finally {
+                            setIsLoading(false);
                           }
-                        } catch (e) {
-                          toast({ title: "Failed to start chat", status: "error" });
-                        } finally {
-                          setIsLoading(false);
-                        }
-                      }}
-                    >
-                      <Text fontWeight="bold">{getFullName(user)}</Text>
-                      <Text fontSize="sm" color="gray.500">{user.email}</Text>
-                    </ListItem>
+                        }}
+                      >
+                        <Avatar name={getFullName(user)} size="sm" bg="blue.400" color="white" />
+                        <Box>
+                          <Text fontWeight="bold" fontSize="md" color="gray.800">{getFullName(user)}</Text>
+                          <Text fontSize="sm" color="gray.500">{user.email}</Text>
+                        </Box>
+                      </ListItem>
+                      {idx < allUsers.length - 1 && <Divider />}
+                    </React.Fragment>
                   ))}
                 </List>
               ) : isLoading ? <Spinner /> : (
