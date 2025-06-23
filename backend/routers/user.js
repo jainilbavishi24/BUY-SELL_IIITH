@@ -9,6 +9,15 @@ import crypto from "crypto";
 
 const userRouter = express.Router();
 
+// Get all users (for chat) - must be before any parameterized routes
+userRouter.get("/all", authenticateUser, async (req, res) => {
+  try {
+    const users = await User.find({ _id: { $ne: req.user.userId } }).select("_id fname lname email");
+    res.json({ success: true, users });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Failed to fetch users." });
+  }
+});
 
 const authenticateUser = (req, res, next) => {
   const authHeader = req.headers.authorization;
@@ -935,17 +944,6 @@ userRouter.post("/relist-expired-carted-items", async (req, res) => {
     res.json({ success: true, relistedCount });
   } catch (error) {
     res.status(500).json({ success: false, message: "Failed to relist expired carted items." });
-  }
-});
-
-// Get all users (for chat)
-userRouter.get("/all", authenticateUser, async (req, res) => {
-  try {
-    const users = await User.find({ _id: { $ne: req.user.userId } }).select("_id fname lname email");
-    console.log("[USER ALL] Returning users:", users.map(u => ({ id: u._id, email: u.email })));
-    res.json({ success: true, users });
-  } catch (error) {
-    res.status(500).json({ success: false, message: "Failed to fetch users." });
   }
 });
 
