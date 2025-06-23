@@ -36,7 +36,7 @@ const ProfilePage = () => {
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const res = await fetch(`/api/user/${userId}/profile`, {
+        const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/user/${userId}/profile`, {
           method: "GET",
           headers: {
             Authorization: `Bearer ${localStorage.getItem("authToken")}`,
@@ -53,7 +53,7 @@ const ProfilePage = () => {
           });
         }
 
-        const reviewsRes = await fetch(`/api/user/${userId}/seller-reviews`, {
+        const reviewsRes = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/user/${userId}/seller-reviews`, {
           method: "GET",
           headers: {
             Authorization: `Bearer ${localStorage.getItem("authToken")}`,
@@ -82,7 +82,7 @@ const ProfilePage = () => {
 
   const handleUpdate = async () => {
     try {
-      const res = await fetch(`/api/user/${userId}/profile`, {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/user/${userId}/profile`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",

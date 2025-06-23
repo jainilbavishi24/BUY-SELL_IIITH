@@ -24,10 +24,16 @@ dotenv.config();
 console.log("JWT_SECRET at startup:", process.env.JWT_SECRET);
 
 const app = express();
-const PORT = 5000;
+const PORT = process.env.PORT || 5000;
+
+const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
+const BACKEND_URL = process.env.BACKEND_URL || `http://localhost:${PORT}`;
 
 app.use(express.json());
-app.use(cors());
+app.use(cors({
+  origin: FRONTEND_URL,
+  credentials: true,
+}));
 app.use("/api/order", userRouter);
 app.use("/api/user", userRouter);
 app.use("/api/auth", authRouter);
@@ -131,11 +137,11 @@ const casLoginCallback = async (req, res) => {
   const ticket = req.query.ticket;
 
   if (!ticket) {
-    return res.redirect('http://localhost:5173/login?error=Invalid_ticket');
+    return res.redirect(`${FRONTEND_URL}/login?error=Invalid_ticket`);
   }
 
   try {
-    const serviceURL = encodeURIComponent('http://localhost:5000/api/auth/cas/callback');
+    const serviceURL = encodeURIComponent(`${BACKEND_URL}/api/auth/cas/callback`);
     const validateURL = `https://login.iiit.ac.in/cas/serviceValidate?ticket=${ticket}&service=${serviceURL}`;
 
     const response = await new Promise((resolve, reject) => {
@@ -159,7 +165,7 @@ const casLoginCallback = async (req, res) => {
 
     const authSuccess = result['cas:serviceResponse']['cas:authenticationSuccess']?.[0];
     if (!authSuccess) {
-      return res.redirect('http://localhost:5173/login?error=Authentication_failed');
+      return res.redirect(`${FRONTEND_URL}/login?error=Authentication_failed`);
     }
 
     const username = authSuccess['cas:user']?.[0];
@@ -205,12 +211,12 @@ const casLoginCallback = async (req, res) => {
       { expiresIn: '24h' }
     );
 
-    res.redirect(`http://localhost:5173/auth/cas/callback?token=${token}&userId=${user._id}`);
+    res.redirect(`${FRONTEND_URL}/auth/cas/callback?token=${token}&userId=${user._id}`);
 
   } catch (error) {
     console.error('CAS Login Error:', error);
     console.error('Error details:', error.stack);
-    res.redirect(`http://localhost:5173/login?error=${encodeURIComponent(error.message)}`);
+    res.redirect(`${FRONTEND_URL}/login?error=${encodeURIComponent(error.message)}`);
   }
 };
 
@@ -218,7 +224,7 @@ app.get('/api/auth/cas/callback', casLoginCallback);
 
 const handleLogout = async (_req, res) => {
   try {
-    const serviceURL = encodeURIComponent('http://localhost:5173/login');
+    const serviceURL = encodeURIComponent(`${FRONTEND_URL}/login`);
     const casLogoutUrl = `https://login.iiit.ac.in/cas/logout?service=${serviceURL}`;
 
     res.json({ casLogoutUrl });
@@ -233,7 +239,7 @@ app.post('/api/auth/logout', handleLogout);
 const server = http.createServer(app);
 const io = new SocketIOServer(server, {
   cors: {
-    origin: "http://localhost:5173", // or "*" for dev
+    origin: FRONTEND_URL,
     methods: ["GET", "POST"],
     credentials: true
   }

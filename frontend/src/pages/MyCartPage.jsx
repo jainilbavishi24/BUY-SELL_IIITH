@@ -43,7 +43,7 @@ const MyCartPage = () => {
       }
 
       try {
-        const res = await fetch(`/api/user/${userId}/cart`, {
+        const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/user/${userId}/cart`, {
           headers: {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
@@ -83,7 +83,7 @@ const MyCartPage = () => {
 
       console.log("Sending order payload:", orderPayload);
 
-      const res = await fetch(`/api/order/checkout`, {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/order/checkout`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -157,7 +157,7 @@ const MyCartPage = () => {
     }
   
     try {
-      const res = await fetch(`/api/user/${userId}/cart`, {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/user/${userId}/cart`, {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
@@ -176,7 +176,7 @@ const MyCartPage = () => {
 
   const removeFromCart = async (itemId) => {
     try {
-      const res = await fetch(`/api/user/cart`, {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/user/cart`, {
         method: "DELETE",
         headers: {
           "Content-Type": "application/json",

@@ -56,10 +56,10 @@ const OrderHistoryPage = () => {
 
     try {
         const [buyerRes, sellerRes] = await Promise.all([
-          fetch(`/api/order/history?userId=${userId}`, {
+          fetch(`${import.meta.env.VITE_BACKEND_URL}/api/order/history?userId=${userId}`, {
             headers: { 'Authorization': `Bearer ${token}` }
           }),
-          fetch(`/api/seller/pastorders?sellerID=${userId}`, {
+          fetch(`${import.meta.env.VITE_BACKEND_URL}/api/seller/pastorders?sellerID=${userId}`, {
             headers: { 'Authorization': `Bearer ${token}` }
           })
         ]);

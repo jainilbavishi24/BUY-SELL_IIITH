@@ -37,7 +37,7 @@ const DeliverItemsPage = () => {
 
   const expirePendingOrders = async () => {
     try {
-      await fetch("/api/order/expire-pending", { method: "POST" });
+      await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/order/expire-pending`, { method: "POST" });
     } catch (error) {
       // Ignore errors for now
     }
@@ -57,7 +57,7 @@ const DeliverItemsPage = () => {
 
     try {
       const res = await fetch(
-        `/api/seller/orders-with-buyer?sellerID=${sellerID}`,
+        `${import.meta.env.VITE_BACKEND_URL}/api/seller/orders-with-buyer?sellerID=${sellerID}`,
         {
           method: "GET",
           headers: {

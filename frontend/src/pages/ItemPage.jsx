@@ -38,12 +38,12 @@ const ItemPage = () => {
     const fetchItemAndSeller = async () => {
       setLoading(true);
       try {
-        const itemRes = await fetch(`/api/items/${id}`);
+        const itemRes = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/items/${id}`);
         const itemData = await itemRes.json();
 
         if (itemData.success) {
           setItem(itemData.data);
-          const sellerRes = await fetch(`/api/user/${itemData.data.sellerID}`);
+          const sellerRes = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/user/${itemData.data.sellerID}`);
           const sellerData = await sellerRes.json();
           if (sellerData.success) {
             setSeller(sellerData.data);
@@ -62,7 +62,7 @@ const ItemPage = () => {
     const checkCartStatus = async () => {
       if (!userId) return;
       try {
-        const res = await fetch(`/api/user/${userId}/cart`, {
+        const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/user/${userId}/cart`, {
           headers: { Authorization: `Bearer ${localStorage.getItem("authToken")}` }
         });
         const data = await res.json();
@@ -87,7 +87,7 @@ const ItemPage = () => {
     }
     try {
       const token = localStorage.getItem("authToken");
-      const res = await fetch(`/api/user/${userId}/cart`, {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/user/${userId}/cart`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

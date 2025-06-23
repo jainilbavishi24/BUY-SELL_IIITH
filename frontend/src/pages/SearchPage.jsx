@@ -43,17 +43,17 @@ const SearchPage = () => {
 
   useEffect(() => {
     // Relist expired carted items on every marketplace load
-    fetch("/api/user/relist-expired-carted-items", { method: "POST" });
+    fetch(`${import.meta.env.VITE_BACKEND_URL}/api/user/relist-expired-carted-items`, { method: "POST" });
     const fetchItems = async () => {
       try {
-        const res = await fetch("/api/items");
+        const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/items`);
         const data = await res.json();
         setItems(data.items);
 
 
         const vendorData = {};
         for (let item of data.items) {
-          const vendorRes = await fetch(`/api/user/${item.sellerID}`);
+          const vendorRes = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/user/${item.sellerID}`);
           const vendor = await vendorRes.json();
           vendorData[item.sellerID] = vendor.data;
         }
