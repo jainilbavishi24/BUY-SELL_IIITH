@@ -33,20 +33,39 @@ function getFullName(user) {
 
 const UserChatModal = ({ isOpen, onClose, socket, activeConversationId, setActiveConversationId }) => {
   const [conversations, setConversations] = useState([]);
+  const [allUsers, setAllUsers] = useState([]);
   const [selectedConv, setSelectedConv] = useState(null);
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [notifications, setNotifications] = useState([]);
+  const [showUserList, setShowUserList] = useState(false);
   const messagesEndRef = useRef(null);
   const toast = useToast();
   const userId = localStorage.getItem("userId");
   const token = localStorage.getItem("authToken");
 
-  // When modal opens, fetch conversations
+  // Fetch all users for starting new chats
+  const fetchAllUsers = async () => {
+    try {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/user/all`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (data.success) {
+        setAllUsers(data.users);
+        console.log("[CHAT] All users fetched for chat:", data.users);
+      }
+    } catch (e) {
+      toast({ title: "Failed to load users", status: "error" });
+    }
+  };
+
+  // When modal opens, fetch conversations and all users
   useEffect(() => {
     if (!isOpen) return;
     fetchConversations();
+    fetchAllUsers();
   }, [isOpen]);
 
   // When modal closes, clear selected conversation and activeConversationId
@@ -150,8 +169,56 @@ const UserChatModal = ({ isOpen, onClose, socket, activeConversationId, setActiv
           <Flex h="full" gap={6}>
             {/* Conversation List */}
             <Box w="300px" borderRight="1px solid #eee" pr={4} overflowY="auto">
-              <Heading size="sm" mb={2}>Conversations</Heading>
-              {isLoading ? <Spinner /> : (
+              <HStack justify="space-between" mb={2}>
+                <Heading size="sm">Conversations</Heading>
+                <Button size="xs" colorScheme="blue" onClick={() => setShowUserList((v) => !v)}>
+                  {showUserList ? "Hide Users" : "New Chat"}
+                </Button>
+              </HStack>
+              {showUserList ? (
+                <List spacing={2}>
+                  {allUsers.length === 0 && <Text color="gray.500">No users found.</Text>}
+                  {allUsers.map((user) => (
+                    <ListItem
+                      key={user._id}
+                      p={2}
+                      borderRadius="md"
+                      bg="gray.50"
+                      cursor="pointer"
+                      _hover={{ bg: "blue.50" }}
+                      onClick={async () => {
+                        // Start or open conversation
+                        setShowUserList(false);
+                        setIsLoading(true);
+                        try {
+                          const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/chat/conversations`, {
+                            method: "POST",
+                            headers: {
+                              "Content-Type": "application/json",
+                              Authorization: `Bearer ${token}`,
+                            },
+                            body: JSON.stringify({ participantId: user._id }),
+                          });
+                          const data = await res.json();
+                          if (data.success && data.conversation) {
+                            fetchConversations();
+                            setSelectedConv(data.conversation);
+                          } else {
+                            toast({ title: "Failed to start chat", status: "error" });
+                          }
+                        } catch (e) {
+                          toast({ title: "Failed to start chat", status: "error" });
+                        } finally {
+                          setIsLoading(false);
+                        }
+                      }}
+                    >
+                      <Text fontWeight="bold">{getFullName(user)}</Text>
+                      <Text fontSize="sm" color="gray.500">{user.email}</Text>
+                    </ListItem>
+                  ))}
+                </List>
+              ) : isLoading ? <Spinner /> : (
                 <List spacing={2}>
                   {conversations.map((conv) => (
                     <ListItem
