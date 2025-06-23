@@ -92,10 +92,6 @@ userRouter.post("/:id/cart", authenticateUser, async (req, res) => {
 
     user.cart.push(item._id);
     await user.save();
-    // Mark item as inactive and set cartedAt
-    item.isActive = false;
-    item.cartedAt = new Date();
-    await item.save();
 
     res.json({ success: true, message: "Item added to cart.", cart: user.cart });
   } catch (error) {
@@ -327,11 +323,6 @@ userRouter.post("/checkout", authenticateUser, async (req, res) => {
     await User.findByIdAndUpdate(userId, {
       $pull: { cart: { $in: items.map((item) => item._id) } },
     });
-
-    await Item.updateMany(
-      { _id: { $in: items.map((item) => item._id) } },
-      { $set: { isActive: false } }
-    );
 
     res.status(201).json({
       success: true,
