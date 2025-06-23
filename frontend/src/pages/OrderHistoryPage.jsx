@@ -95,7 +95,7 @@ const OrderHistoryPage = () => {
 
   const handleCancelPurchase = async (orderId, itemId) => {
     try {
-      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/order/${orderId}/cancel-item`, {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/user/order/${orderId}/cancel-item`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

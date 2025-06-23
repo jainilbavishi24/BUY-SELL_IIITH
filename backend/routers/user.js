@@ -431,6 +431,9 @@ userRouter.post("/complete", authenticateUser,async (req, res) => {
     // Mark the item as sold in the Item collection
     await Item.findByIdAndUpdate(itemId, { status: "sold", reservedBy: null, reservedAt: null });
 
+    // Delete the item from the Item collection after marking as sold
+    await Item.findByIdAndDelete(itemId);
+
     // Check if all items in the order are completed
     const allItemsCompleted = order.items.every((item) => item.status === "Completed");
 
