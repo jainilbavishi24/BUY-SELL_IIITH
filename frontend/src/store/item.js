@@ -14,7 +14,7 @@ export const useItemStore = create((set) => ({
     ) {
       return { success: false, message: "All fields are required" };
     }
-    const res = await fetch("/api/items", {
+    const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/items`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

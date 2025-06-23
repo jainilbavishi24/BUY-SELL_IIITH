@@ -114,7 +114,7 @@ const ItemPage = () => {
     }
     try {
       const token = localStorage.getItem("authToken");
-      const res = await fetch(`/api/chat/conversations`, {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/chat/conversations`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -128,7 +128,7 @@ const ItemPage = () => {
         setActiveConversationId(conversation._id);
         setIsUserChatOpen(true);
       } else {
-        const createRes = await fetch(`/api/chat/conversations`, {
+        const createRes = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/chat/conversations`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -151,7 +151,7 @@ const ItemPage = () => {
 
   const handleUnlist = async (itemId) => {
     try {
-      const res = await fetch(`/api/user/item/${itemId}/unlist`, {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/user/item/${itemId}/unlist`, {
         method: "POST",
         headers: { Authorization: `Bearer ${localStorage.getItem("authToken")}` },
       });
@@ -169,7 +169,7 @@ const ItemPage = () => {
 
   const handleRelist = async (itemId) => {
     try {
-      const res = await fetch(`/api/user/item/${itemId}/relist`, {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/user/item/${itemId}/relist`, {
         method: "POST",
         headers: { Authorization: `Bearer ${localStorage.getItem("authToken")}` },
       });
@@ -187,7 +187,7 @@ const ItemPage = () => {
 
   const handleDelete = async (itemId) => {
     try {
-      const res = await fetch(`/api/user/item/${itemId}`, {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/user/item/${itemId}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${localStorage.getItem("authToken")}` },
       });

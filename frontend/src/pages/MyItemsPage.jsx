@@ -19,7 +19,7 @@ const MyItemsPage = () => {
         return;
       }
 
-      const res = await fetch(`/api/user/${userId}/items`, {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/user/${userId}/items`, {
         headers: { Authorization: `Bearer ${localStorage.getItem("authToken")}` },
       });
       const data = await res.json();
@@ -31,7 +31,7 @@ const MyItemsPage = () => {
 
   const handleUnlist = async (itemId) => {
     try {
-      const res = await fetch(`/api/order/item/${itemId}/unlist`, {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/order/item/${itemId}/unlist`, {
         method: "POST",
         headers: { Authorization: `Bearer ${localStorage.getItem("authToken")}` },
       });
@@ -49,7 +49,7 @@ const MyItemsPage = () => {
 
   const handleRelist = async (itemId) => {
     try {
-      const res = await fetch(`/api/user/item/${itemId}/relist`, {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/user/item/${itemId}/relist`, {
         method: "POST",
         headers: { Authorization: `Bearer ${localStorage.getItem("authToken")}` },
       });
@@ -67,7 +67,7 @@ const MyItemsPage = () => {
 
   const handleDelete = async (itemId) => {
     try {
-      const res = await fetch(`/api/user/item/${itemId}`, {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/user/item/${itemId}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${localStorage.getItem("authToken")}` },
       });

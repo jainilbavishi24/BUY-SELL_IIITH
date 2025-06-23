@@ -82,7 +82,7 @@ const UserChatModal = ({ isOpen, onClose, socket, activeConversationId, setActiv
   const fetchConversations = async () => {
     setIsLoading(true);
     try {
-      const res = await fetch(`/api/chat/conversations`, {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/chat/conversations`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -107,7 +107,7 @@ const UserChatModal = ({ isOpen, onClose, socket, activeConversationId, setActiv
   const fetchMessages = async (convId) => {
     setIsLoading(true);
     try {
-      const res = await fetch(`/api/chat/messages/${convId}`, {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/chat/messages/${convId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();

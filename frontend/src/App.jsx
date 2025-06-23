@@ -60,7 +60,7 @@ function CASCallback({ onLogin }) {
       // Fetch user profile to determine redirect
       const checkUserProfile = async () => {
         try {
-          const res = await fetch(`/api/user/${userId}/profile`, {
+          const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/user/${userId}/profile`, {
             method: "GET",
             headers: {
               Authorization: `Bearer ${token}`,

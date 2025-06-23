@@ -30,7 +30,7 @@ const IIITLoginPage = ({ onLogin }) => {
 
   const validateCASTicket = async (ticket) => {
     try {
-      const response = await fetch('/api/auth/cas-validate', {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/auth/cas-validate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 

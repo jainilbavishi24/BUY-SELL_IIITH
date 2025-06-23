@@ -35,12 +35,10 @@ const Navbar = ({ isAuth, onLogout }) => {
 
   const handleLogout = async () => {
     try {
-
-      const response = await fetch("/api/auth/logout", {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/auth/logout`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-
           Authorization: `Bearer ${localStorage.getItem("authToken")}`,
         },
       });
@@ -51,7 +49,7 @@ const Navbar = ({ isAuth, onLogout }) => {
       localStorage.removeItem("authToken");
       localStorage.removeItem("userId");
 
-     
+      
       onLogout();
 
       
