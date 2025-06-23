@@ -47,6 +47,10 @@ const UserChatModal = ({ isOpen, onClose, socket, activeConversationId, setActiv
 
   // Fetch all users for starting new chats
   const fetchAllUsers = async () => {
+    if (!token) {
+      toast({ title: "Not authenticated", description: "Please log in to see users.", status: "error" });
+      return;
+    }
     try {
       const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/user/all`, {
         headers: { Authorization: `Bearer ${token}` },
