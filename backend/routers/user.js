@@ -9,16 +9,7 @@ import crypto from "crypto";
 
 const userRouter = express.Router();
 
-// Get all users (for chat) - must be before any parameterized routes
-userRouter.get("/all", authenticateUser, async (req, res) => {
-  try {
-    const users = await User.find({ _id: { $ne: req.user.userId } }).select("_id fname lname email");
-    res.json({ success: true, users });
-  } catch (error) {
-    res.status(500).json({ success: false, message: "Failed to fetch users." });
-  }
-});
-
+// Move authenticateUser above all routes
 const authenticateUser = (req, res, next) => {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
@@ -41,6 +32,15 @@ const authenticateUser = (req, res, next) => {
   }
 };
 
+// Get all users (for chat) - must be before any parameterized routes
+userRouter.get("/all", authenticateUser, async (req, res) => {
+  try {
+    const users = await User.find({ _id: { $ne: req.user.userId } }).select("_id fname lname email");
+    res.json({ success: true, users });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Failed to fetch users." });
+  }
+});
 
 userRouter.get("/:id/cart", authenticateUser, async (req, res) => {
   try {
