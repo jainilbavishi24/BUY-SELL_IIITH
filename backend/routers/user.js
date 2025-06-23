@@ -301,20 +301,13 @@ userRouter.post("/checkout", authenticateUser, async (req, res) => {
       return res.status(400).json({ success: false, message: "Invalid order data." });
     }
 
-    // Check all items are active
+    // Check all items are reserved by the user
     const itemDocs = await Item.find({ _id: { $in: items.map(i => i._id) } });
-    const inactiveItem = itemDocs.find(item => !item.isActive);
-    if (inactiveItem) {
-      return res.status(400).json({ success: false, message: `Item '${inactiveItem.name}' is no longer available.` });
+    const notReserved = itemDocs.find(item => item.status !== "reserved" || (item.reservedBy && item.reservedBy.toString() !== userId));
+    if (notReserved) {
+      return res.status(400).json({ success: false, message: `Item '${notReserved.name}' is not reserved for you.` });
     }
-
-    // Mark items as sold
-    await Promise.all(itemDocs.map(async (item) => {
-      item.status = "sold";
-      item.reservedBy = null;
-      item.reservedAt = null;
-      await item.save();
-    }));
+    // Do NOT mark items as sold here. Only after OTP verification.
 
     const otpDetails = await Promise.all(
       items.map(async (item) => {
@@ -899,7 +892,15 @@ userRouter.post("/item/:itemId/relist", authenticateUser, async (req, res) => {
     if (item.sellerID.toString() !== userId) {
       return res.status(403).json({ success: false, message: "Unauthorized: You are not the seller of this item." });
     }
-    item.isActive = true;
+    // Remove item from all user carts
+    await User.updateMany(
+      { cart: item._id },
+      { $pull: { cart: item._id } }
+    );
+    // Set item to available
+    item.status = "available";
+    item.reservedBy = null;
+    item.reservedAt = null;
     await item.save();
     res.json({ success: true, message: "Item relisted successfully." });
   } catch (error) {

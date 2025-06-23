@@ -134,8 +134,16 @@ function App() {
     });
     setSocket(s);
     s.on("chat:message", (msg) => {
+      const userId = localStorage.getItem("userId");
+      // Only notify if the current user is a participant
+      const isParticipant =
+        (msg.participants && msg.participants.some(p => p._id === userId)) ||
+        msg.sender === userId ||
+        (msg.sender && msg.sender._id === userId) ||
+        (msg.receiver && (msg.receiver === userId || msg.receiver._id === userId));
+      if (!isParticipant) return; // Ignore messages not for this user
+
       setLastMessage(msg);
-      // If chat modal is not open or not focused on this conversation, show custom notification
       if (!isUserChatOpen || activeConversationId !== msg.conversationId) {
         setNotificationPreview({
           conversationId: msg.conversationId,
