@@ -802,8 +802,10 @@ userRouter.post("/expire-pending", async (req, res) => {
       let updated = false;
       for (const item of order.items) {
         if (item.status === "Pending" && item.otpExpiration < now) {
-          // Mark item as available again
-          await Item.findByIdAndUpdate(item.itemId, { isActive: true });
+          // Only update if item.itemId is not null
+          if (item.itemId) {
+            await Item.findByIdAndUpdate(item.itemId, { isActive: true });
+          }
           item.status = "Expired";
           updated = true;
           expiredCount++;

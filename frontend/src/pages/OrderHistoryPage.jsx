@@ -148,10 +148,10 @@ const OrderHistoryPage = () => {
             <Divider />
             {order.items.map((item, idx) => (
                 <Flex key={item._id || (item.itemId && item.itemId._id) || item.itemId || idx} justify="space-between" align="center">
-                    <Text>{item.name || item.itemId.name}</Text>
+                    <Text>{item.itemId?.name || item.name || "Unknown Item"}</Text>
         <HStack>
                       <Icon as={FaRupeeSign} />
-                      <Text>{item.price || item.itemId.price}</Text>
+                      <Text>{item.itemId?.price || item.price || "N/A"}</Text>
                       {/* Show OTP if order/item is not completed */}
                       {item.status !== 'Completed' && localStorage.getItem(`otp_${item.itemId || item.itemId._id}`) && (
                         <Box ml={4} p={1} px={2} borderRadius="md" bg="gray.700" color="white" fontSize="sm">

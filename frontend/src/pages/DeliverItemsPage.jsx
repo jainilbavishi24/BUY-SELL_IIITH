@@ -213,10 +213,10 @@ const DeliverItemsPage = () => {
                       >
                         <Text>
                           <strong>Item:</strong>{" "}
-                          {item.itemId.name || "Unknown Item"}
+                          {item.itemId?.name || "Unknown Item"}
                         </Text>
                         <Text>
-                            <strong>Price:</strong> ₹{item.itemId.price || "N/A"}
+                            <strong>Price:</strong> ₹{item.itemId?.price || "N/A"}
                         </Text>
                         <Button
                             mt={4}
@@ -250,10 +250,10 @@ const DeliverItemsPage = () => {
             <ModalBody>
               <Text>
                 <strong>Item:</strong>{" "}
-                {currentItem.itemId.name || "Unknown Item"}
+                {currentItem.itemId?.name || "Unknown Item"}
               </Text>
               <Text>
-                <strong>Price:</strong> ₹{currentItem.itemId.price || "N/A"}
+                <strong>Price:</strong> ₹{currentItem.itemId?.price || "N/A"}
               </Text>
               <Input
                 mt={4}
