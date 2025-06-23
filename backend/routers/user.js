@@ -78,8 +78,8 @@ userRouter.post("/:id/cart", authenticateUser, async (req, res) => {
     if (!item) {
       return res.status(404).json({ success: false, message: "Item not found." });
     }
-    if (!item.isActive) {
-      return res.status(400).json({ success: false, message: "Item is no longer available." });
+    if (item.status !== "available") {
+      return res.status(400).json({ success: false, message: "Item is not available." });
     }
     if (item.sellerID.toString() === id) {
       return res.status(400).json({ success: false, message: "You cannot add your own item to the cart." });
@@ -89,6 +89,12 @@ userRouter.post("/:id/cart", authenticateUser, async (req, res) => {
     if (!user) {
       return res.status(404).json({ success: false, message: "User not found." });
     }
+
+    // Reserve the item
+    item.status = "reserved";
+    item.reservedBy = user._id;
+    item.reservedAt = new Date();
+    await item.save();
 
     user.cart.push(item._id);
     await user.save();
@@ -118,11 +124,12 @@ userRouter.delete("/cart", authenticateUser, async (req, res) => {
     // Remove item from cart
     user.cart = user.cart.filter((cartItemId) => cartItemId.toString() !== itemId);
     await user.save();
-    // Mark item as active and clear cartedAt
+    // Release reservation if user is the reserver
     const item = await Item.findById(itemId);
-    if (item) {
-      item.isActive = true;
-      item.cartedAt = null;
+    if (item && item.reservedBy && item.reservedBy.toString() === userId) {
+      item.status = "available";
+      item.reservedBy = null;
+      item.reservedAt = null;
       await item.save();
     }
 
@@ -292,6 +299,14 @@ userRouter.post("/checkout", authenticateUser, async (req, res) => {
       return res.status(400).json({ success: false, message: `Item '${inactiveItem.name}' is no longer available.` });
     }
 
+    // Mark items as sold
+    await Promise.all(itemDocs.map(async (item) => {
+      item.status = "sold";
+      item.reservedBy = null;
+      item.reservedAt = null;
+      await item.save();
+    }));
+
     const otpDetails = await Promise.all(
       items.map(async (item) => {
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
@@ -329,7 +344,6 @@ userRouter.post("/checkout", authenticateUser, async (req, res) => {
       message: "Order placed successfully.",
       otpDetails: otpDetails.map((item) => ({
         itemId: item.itemId,
-        otp: item.plainotp, 
       })),
     });
   } catch (error) {
@@ -409,24 +423,22 @@ userRouter.post("/complete", authenticateUser,async (req, res) => {
     // Mark the item as completed
     order.items[itemIndex].status = "Completed";
 
+    // Mark the item as sold in the Item collection
+    await Item.findByIdAndUpdate(itemId, { status: "sold", reservedBy: null, reservedAt: null });
 
     // Check if all items in the order are completed
     const allItemsCompleted = order.items.every((item) => item.status === "Completed");
 
     await order.save();
 
-    await Item.findByIdAndUpdate(item._id, {isActive: false});
-
-
     // Respond with success
     res.status(200).json({
       success: true,
-      message: "Order item completed successfully!",
-      allItemsCompleted,
+      message: "Item marked as sold and order completed.",
     });
   } catch (error) {
     console.error("Error completing order:", error);
-    res.status(500).json({ success: false, message: "Failed to complete the order. Please try again." });
+    res.status(500).json({ success: false, message: "Failed to complete order." });
   }
 });
 
@@ -908,14 +920,15 @@ userRouter.delete("/item/:itemId", authenticateUser, async (req, res) => {
 userRouter.post("/relist-expired-carted-items", async (req, res) => {
   try {
     const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
-    const items = await Item.find({ isActive: false, cartedAt: { $lt: tenMinutesAgo } });
+    const items = await Item.find({ status: "reserved", reservedAt: { $lt: tenMinutesAgo } });
     let relistedCount = 0;
     for (const item of items) {
       // Check if item is still in any user's cart
       const userWithItem = await User.findOne({ cart: item._id });
       if (userWithItem) continue; // Still in someone's cart, skip
-      item.isActive = true;
-      item.cartedAt = null;
+      item.status = "available";
+      item.reservedBy = null;
+      item.reservedAt = null;
       await item.save();
       relistedCount++;
     }

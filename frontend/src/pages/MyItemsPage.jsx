@@ -8,8 +8,8 @@ const MyItemsPage = () => {
   const cardBg = useColorModeValue("white", "gray.800");
   const cardBorder = (isActive) => useColorModeValue(isActive ? "green.400" : "gray.400", isActive ? "green.300" : "gray.600");
   const cardText = useColorModeValue("gray.800", "white");
-  const badgeColor = (isActive) => isActive ? (useColorModeValue("green", "green")) : (useColorModeValue("gray", "gray"));
-  const badgeBg = (isActive) => isActive ? (useColorModeValue("green.50", "green.900")) : (useColorModeValue("gray.100", "gray.700"));
+  const badgeColor = (status) => status === "available" ? "green" : status === "reserved" ? "yellow" : "red";
+  const badgeBg = (status) => status === "available" ? (useColorModeValue("green.50", "green.900")) : status === "reserved" ? (useColorModeValue("yellow.100", "yellow.700")) : (useColorModeValue("red.100", "red.700"));
 
   useEffect(() => {
     const fetchItems = async () => {
@@ -38,7 +38,7 @@ const MyItemsPage = () => {
       const data = await res.json();
       if (data.success) {
         toast({ title: "Item unlisted", status: "success" });
-        setMyItems((prev) => prev.map(item => item._id === itemId ? { ...item, isActive: false } : item));
+        setMyItems((prev) => prev.map(item => item._id === itemId ? { ...item, status: "unlisted" } : item));
       } else {
         toast({ title: "Error", description: data.message, status: "error" });
       }
@@ -56,7 +56,7 @@ const MyItemsPage = () => {
       const data = await res.json();
       if (data.success) {
         toast({ title: "Item relisted", status: "success" });
-        setMyItems((prev) => prev.map(item => item._id === itemId ? { ...item, isActive: true } : item));
+        setMyItems((prev) => prev.map(item => item._id === itemId ? { ...item, status: "available" } : item));
       } else {
         toast({ title: "Error", description: data.message, status: "error" });
       }

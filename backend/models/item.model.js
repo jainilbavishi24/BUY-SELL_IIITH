@@ -34,6 +34,20 @@ const itemSchema = new mongoose.Schema({
     type: Date,
     default: null,
   },
+  status: {
+    type: String,
+    enum: ["available", "reserved", "sold"],
+    default: "available",
+  },
+  reservedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+    default: null,
+  },
+  reservedAt: {
+    type: Date,
+    default: null,
+  },
 });
 
 const Item = mongoose.model("Item", itemSchema);

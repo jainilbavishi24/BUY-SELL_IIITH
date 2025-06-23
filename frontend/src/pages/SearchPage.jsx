@@ -175,13 +175,15 @@ const SearchPage = () => {
               boxShadow={cardShadow}
               borderRadius="lg"
               p={5}
-              cursor="pointer"
-              onClick={() => navigate(`/item/${item._id}`)}
-              _hover={{
+              cursor={item.status === "sold" ? "not-allowed" : "pointer"}
+              onClick={() => {
+                if (item.status !== "sold") navigate(`/item/${item._id}`);
+              }}
+              _hover={item.status !== "sold" ? {
                 transform: "scale(1.05)",
                 transition: "0.3s ease-in-out",
                 boxShadow: "xl",
-              }}
+              } : {}}
             >
               <VStack align="stretch" spacing={3}>
               <Image
@@ -195,6 +197,13 @@ const SearchPage = () => {
                 <Heading size="md" color={accentColor} noOfLines={1}>
                   {item.name}
                 </Heading>
+                <Badge colorScheme={
+                  item.status === "available" ? "green" :
+                  item.status === "reserved" ? "yellow" : "red"
+                }>
+                  {item.status === "available" ? "Available" :
+                   item.status === "reserved" ? "Reserved" : "Sold"}
+                </Badge>
 
                 {/* Category Badge */}
                 <HStack spacing={2}>

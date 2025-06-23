@@ -237,6 +237,13 @@ const ItemPage = () => {
               <Text fontSize="3xl" fontWeight="bold" color="green.500">
                 {item.price}
               </Text>
+              <Badge colorScheme={
+                item.status === "available" ? "green" :
+                item.status === "reserved" ? "yellow" : "red"
+              } ml={4} fontSize="lg">
+                {item.status === "available" ? "Available" :
+                 item.status === "reserved" ? "Reserved" : "Sold"}
+              </Badge>
           </HStack>
 
             <Box>
@@ -285,17 +292,25 @@ const ItemPage = () => {
             </VStack>
           ) : (
             <>
-              <Button 
-                leftIcon={<FaShoppingCart />} 
-                colorScheme="brand" 
-                variant="solid" 
-                size="lg" 
-                mt={4} 
-                onClick={() => handleAddToCart(item._id)} 
-                disabled={isItemInCart}
-              >
-                {isItemInCart ? "Added to Cart" : "Add to Cart"}
-              </Button>
+              {item.status === "available" ? (
+                <Button
+                  leftIcon={<FaShoppingCart />}
+                  colorScheme="teal"
+                  size="lg"
+                  onClick={() => handleAddToCart(item._id)}
+                  isDisabled={isItemInCart}
+                >
+                  {isItemInCart ? "In Cart" : "Add to Cart"}
+                </Button>
+              ) : item.status === "reserved" ? (
+                <Button colorScheme="yellow" size="lg" isDisabled>
+                  Reserved by another user
+                </Button>
+              ) : (
+                <Button colorScheme="red" size="lg" isDisabled>
+                  Sold
+                </Button>
+              )}
               {seller && seller._id !== userId && (
                 <Button
                   colorScheme="green"
