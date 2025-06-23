@@ -319,7 +319,8 @@ userRouter.post("/checkout", authenticateUser, async (req, res) => {
           sellerID: item.sellerID,
           otpHash: hashedOtp,
           plainotp: otp,
-          otpExpiration: new Date().getTime() + 10 * 60 * 1000, 
+          otpExpiration: new Date().getTime() + 10 * 60 * 1000,
+          status: "Pending",
         };
       })
     );
@@ -333,6 +334,7 @@ userRouter.post("/checkout", authenticateUser, async (req, res) => {
         sellerID: item.sellerID,
         otpHash: item.otpHash,
         otpExpiration: item.otpExpiration,
+        status: item.status,
       })),
       amount: items.reduce((acc, item) => acc + item.price, 0),
     });
@@ -346,6 +348,7 @@ userRouter.post("/checkout", authenticateUser, async (req, res) => {
       message: "Order placed successfully.",
       otpDetails: otpDetails.map((item) => ({
         itemId: item.itemId,
+        otp: item.plainotp,
       })),
     });
   } catch (error) {
