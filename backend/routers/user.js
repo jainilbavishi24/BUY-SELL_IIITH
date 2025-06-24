@@ -302,6 +302,9 @@ userRouter.post("/checkout", authenticateUser, async (req, res) => {
     }
     // Check all items are reserved by the user
     const itemDocs = await Item.find({ _id: { $in: items } });
+    if (itemDocs.length !== items.length) {
+      return res.status(400).json({ success: false, message: "Some items in your cart are no longer available." });
+    }
     const notReserved = itemDocs.find(item => item.status !== "reserved" && item.reservedBy && item.reservedBy.toString() !== userId);
     if (notReserved) {
       return res.status(400).json({ success: false, message: `Item '${notReserved.name}' is not reserved for you.` });
