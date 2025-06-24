@@ -790,10 +790,11 @@ userRouter.post("/item/:itemId/relist", authenticateUser, async (req, res) => {
       { cart: item._id },
       { $pull: { cart: item._id } }
     );
-    // Set item to available
+    // Set item to available and active
     item.status = "available";
     item.reservedBy = null;
     item.reservedAt = null;
+    item.isActive = true;
     await item.save();
     res.json({ success: true, message: "Item relisted successfully." });
   } catch (error) {
