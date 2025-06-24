@@ -215,55 +215,9 @@ userRouter.get("/:userId/orders",authenticateUser, async (req, res) => {
   }
 });
 
-userRouter.post("/:userId/order",authenticateUser, async (req, res) => {
-  try {
-    const { userId } = req.params;
-    const { items } = req.body;
-
-    if (!items || items.length === 0) {
-      return res.status(400).json({ success: false, message: "No items in the cart." });
-    }
-
-    const itemDetails = await Item.find({ _id: { $in: items } });
-
-    if (!itemDetails.length) {
-      return res.status(400).json({ success: false, message: "Invalid items in the cart." });
-    }
-
-    const totalAmount = itemDetails.reduce((acc, item) => acc + item.price, 0);
-
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();  
-    const hashedOTP = await bcrypt.hash(otp, 10);
-
-    const order = new Order({
-      userId: new mongoose.Types.ObjectId(userId),
-      items: itemDetails.map(item => ({
-        _id: item._id,
-        name: item.name,
-        price: item.price,
-        description: item.description,
-        category: item.category,
-        sellerID: item.sellerID,  
-        image: item.image
-      })),
-      amount: totalAmount,
-      hashedOTP,
-      sellerID: itemDetails[0].sellerID,
-      transactionID: crypto.randomUUID(),
-    });
-
-    await order.save();
-
-    res.status(201).json({
-      success: true,
-      message: "Order placed successfully.",
-      otp: otp, 
-    });
-
-  } catch (error) {
-    console.error("Order placement error:", error);
-    res.status(500).json({ success: false, message: "Order placement failed.", error: error.message });
-  }
+// DISABLED: Legacy order endpoint that creates orders with missing itemId and does not use robust OTP logic
+userRouter.post("/:userId/order", authenticateUser, (req, res) => {
+  return res.status(410).json({ success: false, message: "This order endpoint is deprecated. Please use /checkout." });
 });
 
 userRouter.post("/:orderId/verify",authenticateUser, async (req, res) => {
