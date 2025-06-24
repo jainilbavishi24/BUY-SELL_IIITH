@@ -319,7 +319,7 @@ userRouter.post("/checkout", authenticateUser, async (req, res) => {
           sellerID: item.sellerID,
           otpHash: hashedOtp,
           plainotp: otp,
-          otpExpiration: new Date().getTime() + 10 * 60 * 1000,
+          otpExpiration: new Date().getTime() + 10 * 60 * 1000, 
           status: "Pending",
         };
       })
@@ -348,7 +348,7 @@ userRouter.post("/checkout", authenticateUser, async (req, res) => {
       message: "Order placed successfully.",
       otpDetails: otpDetails.map((item) => ({
         itemId: item.itemId,
-        otp: item.plainotp,
+        otp: item.plainotp, 
       })),
     });
   } catch (error) {
@@ -358,36 +358,31 @@ userRouter.post("/checkout", authenticateUser, async (req, res) => {
 });
 
 
-userRouter.get("/history", authenticateUser,async (req, res) => {
+userRouter.get("/history", authenticateUser, async (req, res) => {
   try {
     const userId = req.query.userId;
-    
     if (!userId) {
       return res.status(400).json({ success: false, message: "User ID is required." });
     }
-
     // Fetch orders from the database, including items with OTP hashes
     const orders = await Order.find({ userId }).populate("items.itemId");
-
+    // Always return a consistent structure
     if (!orders.length) {
-      return res.status(404).json({ success: false, message: "No orders found." });
+      return res.status(200).json({ success: true, orders: [] });
     }
-
-    // Retrieve the stored OTPs from local storage (in frontend) and prepare response
     const responseOrders = orders.map(order => ({
       _id: order._id,
       amount: order.amount,
       createdAt: order.createdAt,
       items: order.items.map(item => ({
-        itemId: item.itemId._id.toString(),
-        name: item.itemId.name, // Assuming 'name' exists in Item schema
-        price: item.itemId.price, // Assuming 'price' exists in Item schema
+        itemId: item.itemId?._id?.toString?.() || item.itemId?.toString?.() || null,
+        name: item.itemId?.name || null,
+        price: item.itemId?.price || null,
         sellerID: item.sellerID,
         status: item.status,
-        otpHash: item.otpHash, // Send hashed OTP from DB
+        otpHash: item.otpHash,
       })),
     }));
-
     res.status(200).json({ success: true, orders: responseOrders });
   } catch (error) {
     console.error("Error fetching order history:", error);
@@ -878,10 +873,12 @@ userRouter.post("/order/:orderId/cancel-item", authenticateUser, async (req, res
       return res.status(400).json({ success: false, message: "Item not found or not pending." });
     }
     item.status = "Cancelled";
-    await Item.findByIdAndUpdate(itemId, { isActive: true });
+    // Set item as available in Item collection
+    await Item.findByIdAndUpdate(itemId, { status: "available", reservedBy: null, reservedAt: null });
     await order.save();
     res.json({ success: true, message: "Purchase cancelled and item re-listed." });
   } catch (error) {
+    console.error("Cancel purchase error:", error);
     res.status(500).json({ success: false, message: "Failed to cancel purchase." });
   }
 });

@@ -293,13 +293,13 @@ const ItemPage = () => {
           ) : (
             <>
               {item.status === "available" ? (
-                <Button
-                  leftIcon={<FaShoppingCart />}
+              <Button 
+                leftIcon={<FaShoppingCart />} 
                   colorScheme="teal"
-                  size="lg"
-                  onClick={() => handleAddToCart(item._id)}
+                size="lg" 
+                onClick={() => handleAddToCart(item._id)} 
                   isDisabled={isItemInCart}
-                >
+              >
                   {isItemInCart ? "In Cart" : "Add to Cart"}
                 </Button>
               ) : item.status === "reserved" ? (
@@ -309,7 +309,7 @@ const ItemPage = () => {
               ) : (
                 <Button colorScheme="red" size="lg" isDisabled>
                   Sold
-                </Button>
+              </Button>
               )}
               {seller && seller._id !== userId && (
                 <Button
