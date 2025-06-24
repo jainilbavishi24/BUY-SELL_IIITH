@@ -105,9 +105,14 @@ const MyItemsPage = () => {
                 </VStack>
               </HStack>
               <HStack mt={4} spacing={3}>
-                {item.status === "available" ? (
+                {item.isActive && item.status === "available" ? (
                   <Button colorScheme="red" onClick={() => handleUnlist(item._id)}>
                     Remove/Unlist
+                  </Button>
+                ) : null}
+                {!item.isActive ? (
+                  <Button colorScheme="green" onClick={() => handleRelist(item._id)}>
+                    Relist
                   </Button>
                 ) : null}
                 <Button colorScheme="gray" onClick={() => handleDelete(item._id)}>
