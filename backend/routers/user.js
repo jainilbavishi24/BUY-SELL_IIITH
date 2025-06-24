@@ -81,7 +81,6 @@ userRouter.get("/:id/items", authenticateUser, async (req, res) => {
 userRouter.post("/:id/cart", authenticateUser, async (req, res) => {
   const { id } = req.params;
   const { itemId } = req.body;
-
   try {
     const item = await Item.findById(itemId);
     if (!item) {
@@ -93,21 +92,17 @@ userRouter.post("/:id/cart", authenticateUser, async (req, res) => {
     if (item.sellerID.toString() === id) {
       return res.status(400).json({ success: false, message: "You cannot add your own item to the cart." });
     }
-
     const user = await User.findById(id);
     if (!user) {
       return res.status(404).json({ success: false, message: "User not found." });
     }
-
     // Reserve the item
     item.status = "reserved";
     item.reservedBy = user._id;
     item.reservedAt = new Date();
     await item.save();
-
     user.cart.push(item._id);
     await user.save();
-
     res.json({ success: true, message: "Item added to cart.", cart: user.cart });
   } catch (error) {
     console.error(error);
@@ -117,20 +112,16 @@ userRouter.post("/:id/cart", authenticateUser, async (req, res) => {
 
 
 userRouter.delete("/cart", authenticateUser, async (req, res) => {
-  const userId = req.user.userId;  // Extract userId from token
-  const { itemId } = req.body;  // Get itemId from request body
-
+  const userId = req.user.userId;
+  const { itemId } = req.body;
   if (!itemId) {
     return res.status(400).json({ success: false, message: "Item ID is required." });
   }
-
   try {
     const user = await User.findById(userId);
     if (!user) {
       return res.status(404).json({ success: false, message: "User not found." });
     }
-
-    // Remove item from cart
     user.cart = user.cart.filter((cartItemId) => cartItemId.toString() !== itemId);
     await user.save();
     // Release reservation if user is the reserver
@@ -141,7 +132,6 @@ userRouter.delete("/cart", authenticateUser, async (req, res) => {
       item.reservedAt = null;
       await item.save();
     }
-
     res.json({ success: true, message: "Item removed from cart.", cart: user.cart });
   } catch (error) {
     console.error("Error removing from cart:", error);
@@ -293,23 +283,21 @@ userRouter.post("/:orderId/verify",authenticateUser, async (req, res) => {
   }
 });
 
-// PATCH: Ensure order/items are only marked as 'Completed' after OTP verification, not at checkout
+// PATCH: Checkout - Only allow if all items reserved by user, keep reserved until OTP/cancel
 userRouter.post("/checkout", authenticateUser, async (req, res) => {
   try {
     const { userId, items } = req.body;
     if (!userId || !items || !items.length) {
       return res.status(400).json({ success: false, message: "Invalid order data." });
     }
-    // Check all items are reserved by the user
     const itemDocs = await Item.find({ _id: { $in: items } });
     if (itemDocs.length !== items.length) {
       return res.status(400).json({ success: false, message: "Some items in your cart are no longer available." });
     }
-    const notReserved = itemDocs.find(item => item.status !== "reserved" && item.reservedBy && item.reservedBy.toString() !== userId);
+    const notReserved = itemDocs.find(item => item.status !== "reserved" || (item.reservedBy && item.reservedBy.toString() !== userId));
     if (notReserved) {
       return res.status(400).json({ success: false, message: `Item '${notReserved.name}' is not reserved for you.` });
     }
-    // Do NOT mark items as sold or completed here. Only after OTP verification.
     const otpDetails = await Promise.all(
       itemDocs.map(async (item) => {
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
@@ -320,11 +308,10 @@ userRouter.post("/checkout", authenticateUser, async (req, res) => {
           otpHash: hashedOtp,
           plainotp: otp,
           otpExpiration: new Date().getTime() + 10 * 60 * 1000,
-          status: "Pending", // Always pending at checkout
+          status: "Pending",
         };
       })
     );
-    console.log("Order created for:", userId, "with items:", itemDocs.map(i => i._id));
     await Order.create({
       userId,
       items: otpDetails.map((item) => ({
@@ -332,18 +319,11 @@ userRouter.post("/checkout", authenticateUser, async (req, res) => {
         sellerID: item.sellerID,
         otpHash: item.otpHash,
         otpExpiration: item.otpExpiration,
-        status: item.status, // Always 'Pending' at checkout
+        status: item.status,
       })),
       amount: itemDocs.reduce((acc, item) => acc + item.price, 0),
     });
-    // PATCH: Mark items as reserved after checkout
-    await Promise.all(itemDocs.map(item =>
-      Item.findByIdAndUpdate(item._id, {
-        status: "reserved",
-        reservedBy: userId,
-        reservedAt: new Date()
-      })
-    ));
+    // Items remain reserved until OTP/cancel
     await User.findByIdAndUpdate(userId, {
       $pull: { cart: { $in: itemDocs.map((item) => item._id) } },
     });
@@ -394,51 +374,54 @@ userRouter.get("/history", authenticateUser, async (req, res) => {
   }
 });
 
-userRouter.post("/complete", authenticateUser,async (req, res) => {
-  const { itemId, otp } = req.body;
-
+// PATCH: Cancel - Allow if order item is Pending, always set item to available
+userRouter.post("/order/:orderId/cancel-item", authenticateUser, async (req, res) => {
   try {
-    // Find the order containing the specific item
-    const order = await Order.findOne({ "items.itemId": itemId });
-
+    const { orderId } = req.params;
+    const { itemId } = req.body;
+    const userId = req.user.userId;
+    const order = await Order.findById(orderId);
     if (!order) {
       return res.status(404).json({ success: false, message: "Order not found." });
     }
+    if (order.userId.toString() !== userId) {
+      return res.status(403).json({ success: false, message: "Unauthorized: Not your order." });
+    }
+    const item = order.items.find(i => i.itemId.toString() === itemId && i.status === "Pending");
+    if (!item) {
+      return res.status(400).json({ success: false, message: "Item not found or not pending." });
+    }
+    item.status = "Cancelled";
+    await Item.findByIdAndUpdate(itemId, { status: "available", reservedBy: null, reservedAt: null });
+    await order.save();
+    res.json({ success: true, message: "Purchase cancelled and item re-listed." });
+  } catch (error) {
+    console.error("Cancel purchase error:", error);
+    res.status(500).json({ success: false, message: "Failed to cancel purchase." });
+  }
+});
 
-    // Find the specific item in the order
+// PATCH: OTP - Only mark item as sold and delete after OTP
+userRouter.post("/complete", authenticateUser,async (req, res) => {
+  const { itemId, otp } = req.body;
+  try {
+    const order = await Order.findOne({ "items.itemId": itemId });
+    if (!order) {
+      return res.status(404).json({ success: false, message: "Order not found." });
+    }
     const itemIndex = order.items.findIndex((item) => item.itemId.toString() === itemId);
-
     if (itemIndex === -1) {
       return res.status(404).json({ success: false, message: "Item not found in the order." });
     }
-
     const item = order.items[itemIndex];
-
-    // Compare the entered OTP with the stored hash using bcrypt
-    console.log("Entered OTP:", otp);
-    console.log("Stored OTP hash:", item.otpHash);
-
     const isOtpValid = await bcrypt.compare(otp, item.otpHash);
-
     if (!isOtpValid) {
       return res.status(400).json({ success: false, message: "Invalid OTP, please try again." });
     }
-
-    // Mark the item as completed
     order.items[itemIndex].status = "Completed";
-
-    // Mark the item as sold in the Item collection
     await Item.findByIdAndUpdate(itemId, { status: "sold", reservedBy: null, reservedAt: null });
-
-    // Delete the item from the Item collection after marking as sold
     await Item.findByIdAndDelete(itemId);
-
-    // Check if all items in the order are completed
-    const allItemsCompleted = order.items.every((item) => item.status === "Completed");
-
     await order.save();
-
-    // Respond with success
     res.status(200).json({
       success: true,
       message: "Item marked as sold and order completed.",
@@ -856,34 +839,6 @@ userRouter.post("/item/:itemId/unlist", authenticateUser, async (req, res) => {
     res.json({ success: true, message: "Item unlisted successfully." });
   } catch (error) {
     res.status(500).json({ success: false, message: "Failed to unlist item." });
-  }
-});
-
-// Buyer cancels a pending purchase (order item)
-userRouter.post("/order/:orderId/cancel-item", authenticateUser, async (req, res) => {
-  try {
-    const { orderId } = req.params;
-    const { itemId } = req.body;
-    const userId = req.user.userId;
-    const order = await Order.findById(orderId);
-    if (!order) {
-      return res.status(404).json({ success: false, message: "Order not found." });
-    }
-    if (order.userId.toString() !== userId) {
-      return res.status(403).json({ success: false, message: "Unauthorized: Not your order." });
-    }
-    const item = order.items.find(i => i.itemId.toString() === itemId && i.status === "Pending");
-    if (!item) {
-      return res.status(400).json({ success: false, message: "Item not found or not pending." });
-    }
-    item.status = "Cancelled";
-    // Set item as available in Item collection
-    await Item.findByIdAndUpdate(itemId, { status: "available", reservedBy: null, reservedAt: null });
-    await order.save();
-    res.json({ success: true, message: "Purchase cancelled and item re-listed." });
-  } catch (error) {
-    console.error("Cancel purchase error:", error);
-    res.status(500).json({ success: false, message: "Failed to cancel purchase." });
   }
 });
 
