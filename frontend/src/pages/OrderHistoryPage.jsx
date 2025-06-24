@@ -137,7 +137,6 @@ const OrderHistoryPage = () => {
   );
 
   const renderOrderCard = (order) => {
-    // Determine order status: if all items are completed, show 'Completed', else 'Pending'
     const allCompleted = order.items.every(item => item.status === 'Completed');
     const orderStatus = allCompleted ? 'Completed' : 'Pending';
     return (
@@ -147,25 +146,35 @@ const OrderHistoryPage = () => {
             <Heading size='sm'>Order ID: {(order.transactionID || order._id)?.slice(0, 12) || 'Unknown'}...</Heading>
             <Divider />
             {order.items.map((item, idx) => {
-              // Robustly get itemId and fallback key
-              const itemId = item?.itemId?._id || item?.itemId || item?._id || `item-${idx}`;
+              // Robustly get otpKey
+              let otpKey = null;
+              if (item?.itemId && typeof item.itemId === 'object') {
+                otpKey = item.itemId._id;
+              } else if (item?.itemId) {
+                otpKey = item.itemId;
+              } else if (item?._id) {
+                otpKey = item._id;
+              }
+              if (!otpKey) {
+                console.warn('Order item missing itemId/_id:', item);
+              }
               const itemName = item?.itemId?.name || item?.name || "Unknown Item";
               const itemPrice = item?.itemId?.price || item?.price || "N/A";
               return (
-                <Flex key={itemId} justify="space-between" align="center">
+                <Flex key={otpKey || `item-${idx}`} justify="space-between" align="center">
                   <Text>{itemName}</Text>
                   <HStack>
                     <Icon as={FaRupeeSign} />
                     <Text>{itemPrice}</Text>
                     {/* Show OTP if order/item is not completed */}
-                    {item.status !== 'Completed' && itemId && localStorage.getItem(`otp_${itemId}`) && (
+                    {item.status !== 'Completed' && otpKey && localStorage.getItem(`otp_${otpKey}`) && (
                       <Box ml={4} p={1} px={2} borderRadius="md" bg="gray.700" color="white" fontSize="sm">
-                        OTP: {JSON.parse(localStorage.getItem(`otp_${itemId}`)).otp}
+                        OTP: {JSON.parse(localStorage.getItem(`otp_${otpKey}`)).otp}
                       </Box>
                     )}
                     {/* Cancel Purchase button for pending items */}
-                    {item.status === 'Pending' && itemId && (
-                      <Button ml={4} colorScheme="red" size="sm" onClick={() => handleCancelPurchase(order._id, itemId)}>
+                    {item.status === 'Pending' && otpKey && (
+                      <Button ml={4} colorScheme="red" size="sm" onClick={() => handleCancelPurchase(order._id, otpKey)}>
                         Cancel Purchase
                       </Button>
                     )}
