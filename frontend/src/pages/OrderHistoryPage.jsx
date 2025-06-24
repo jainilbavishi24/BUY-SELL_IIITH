@@ -140,37 +140,43 @@ const OrderHistoryPage = () => {
     // Determine order status: if all items are completed, show 'Completed', else 'Pending'
     const allCompleted = order.items.every(item => item.status === 'Completed');
     const orderStatus = allCompleted ? 'Completed' : 'Pending';
-  return (
+    return (
       <Card key={order._id} width="100%" mt={4} variant="outline">
         <CardBody>
           <Stack spacing="3">
-            <Heading size='sm'>Order ID: {(order.transactionID || order._id).slice(0, 12)}...</Heading>
+            <Heading size='sm'>Order ID: {(order.transactionID || order._id)?.slice(0, 12) || 'Unknown'}...</Heading>
             <Divider />
-            {order.items.map((item, idx) => (
-                <Flex key={item._id || (item.itemId && item.itemId._id) || item.itemId || idx} justify="space-between" align="center">
-                    <Text>{item.itemId?.name || item.name || "Unknown Item"}</Text>
-        <HStack>
-                      <Icon as={FaRupeeSign} />
-                      <Text>{item.itemId?.price || item.price || "N/A"}</Text>
-                      {/* Show OTP if order/item is not completed */}
-                      {item.status !== 'Completed' && localStorage.getItem(`otp_${item.itemId || item.itemId._id}`) && (
-                        <Box ml={4} p={1} px={2} borderRadius="md" bg="gray.700" color="white" fontSize="sm">
-                          OTP: {JSON.parse(localStorage.getItem(`otp_${item.itemId || item.itemId._id}`)).otp}
-                        </Box>
-                      )}
-                      {/* Cancel Purchase button for pending items */}
-                      {item.status === 'Pending' && (
-                        <Button ml={4} colorScheme="red" size="sm" onClick={() => handleCancelPurchase(order._id, item.itemId._id || item.itemId)}>
-                          Cancel Purchase
-                            </Button>
-                          )}
-                            </HStack>
+            {order.items.map((item, idx) => {
+              // Robustly get itemId and fallback key
+              const itemId = item?.itemId?._id || item?.itemId || item?._id || `item-${idx}`;
+              const itemName = item?.itemId?.name || item?.name || "Unknown Item";
+              const itemPrice = item?.itemId?.price || item?.price || "N/A";
+              return (
+                <Flex key={itemId} justify="space-between" align="center">
+                  <Text>{itemName}</Text>
+                  <HStack>
+                    <Icon as={FaRupeeSign} />
+                    <Text>{itemPrice}</Text>
+                    {/* Show OTP if order/item is not completed */}
+                    {item.status !== 'Completed' && itemId && localStorage.getItem(`otp_${itemId}`) && (
+                      <Box ml={4} p={1} px={2} borderRadius="md" bg="gray.700" color="white" fontSize="sm">
+                        OTP: {JSON.parse(localStorage.getItem(`otp_${itemId}`)).otp}
+                      </Box>
+                    )}
+                    {/* Cancel Purchase button for pending items */}
+                    {item.status === 'Pending' && itemId && (
+                      <Button ml={4} colorScheme="red" size="sm" onClick={() => handleCancelPurchase(order._id, itemId)}>
+                        Cancel Purchase
+                      </Button>
+                    )}
+                  </HStack>
                 </Flex>
-            ))}
+              );
+            })}
             <Divider />
             <Flex justify="space-between" fontWeight="bold">
-                <Text>Total Amount</Text>
-                <HStack><Icon as={FaRupeeSign} /><Text>{order.amount}</Text></HStack>
+              <Text>Total Amount</Text>
+              <HStack><Icon as={FaRupeeSign} /><Text>{order.amount}</Text></HStack>
             </Flex>
             <Text>Status: <Text as="span" fontWeight="semibold" color={orderStatus === 'Completed' ? 'green.400' : 'orange.400'}>{orderStatus}</Text></Text>
           </Stack>
