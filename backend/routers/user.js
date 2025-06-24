@@ -293,40 +293,35 @@ userRouter.post("/:orderId/verify",authenticateUser, async (req, res) => {
   }
 });
 
+// PATCH: Ensure order/items are only marked as 'Completed' after OTP verification, not at checkout
 userRouter.post("/checkout", authenticateUser, async (req, res) => {
   try {
     const { userId, items } = req.body;
-
     if (!userId || !items || !items.length) {
       return res.status(400).json({ success: false, message: "Invalid order data." });
     }
-
     // Check all items are reserved by the user
     const itemDocs = await Item.find({ _id: { $in: items.map(i => i._id) } });
     const notReserved = itemDocs.find(item => item.status !== "reserved" || (item.reservedBy && item.reservedBy.toString() !== userId));
     if (notReserved) {
       return res.status(400).json({ success: false, message: `Item '${notReserved.name}' is not reserved for you.` });
     }
-    // Do NOT mark items as sold here. Only after OTP verification.
-
+    // Do NOT mark items as sold or completed here. Only after OTP verification.
     const otpDetails = await Promise.all(
       items.map(async (item) => {
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
         const hashedOtp = await bcrypt.hash(otp, 10);
-
         return {
           itemId: item._id,
           sellerID: item.sellerID,
           otpHash: hashedOtp,
           plainotp: otp,
-          otpExpiration: new Date().getTime() + 10 * 60 * 1000, 
-          status: "Pending",
+          otpExpiration: new Date().getTime() + 10 * 60 * 1000,
+          status: "Pending", // Always pending at checkout
         };
       })
     );
-
     console.log("Order created for:", userId, "with items:", items);
-
     await Order.create({
       userId,
       items: otpDetails.map((item) => ({
@@ -334,21 +329,27 @@ userRouter.post("/checkout", authenticateUser, async (req, res) => {
         sellerID: item.sellerID,
         otpHash: item.otpHash,
         otpExpiration: item.otpExpiration,
-        status: item.status,
+        status: item.status, // Always 'Pending' at checkout
       })),
       amount: items.reduce((acc, item) => acc + item.price, 0),
     });
-
+    // PATCH: Mark items as reserved after checkout
+    await Promise.all(items.map(item =>
+      Item.findByIdAndUpdate(item._id, {
+        status: "reserved",
+        reservedBy: userId,
+        reservedAt: new Date()
+      })
+    ));
     await User.findByIdAndUpdate(userId, {
       $pull: { cart: { $in: items.map((item) => item._id) } },
     });
-
     res.status(201).json({
       success: true,
       message: "Order placed successfully.",
       otpDetails: otpDetails.map((item) => ({
         itemId: item.itemId,
-        otp: item.plainotp, 
+        otp: item.plainotp,
       })),
     });
   } catch (error) {
