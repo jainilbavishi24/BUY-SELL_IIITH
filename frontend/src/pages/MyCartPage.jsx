@@ -73,12 +73,7 @@ const MyCartPage = () => {
 
       const orderPayload = {
         userId,
-        items: cartItems.map((item) => ({
-          _id: item._id,
-          name: item.name,
-          price: item.price,
-          sellerID: item.sellerID.toString(),
-        })),
+        items: cartItems.map((item) => item._id),
       };
 
       console.log("Sending order payload:", orderPayload);

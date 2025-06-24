@@ -301,14 +301,14 @@ userRouter.post("/checkout", authenticateUser, async (req, res) => {
       return res.status(400).json({ success: false, message: "Invalid order data." });
     }
     // Check all items are reserved by the user
-    const itemDocs = await Item.find({ _id: { $in: items.map(i => i._id) } });
-    const notReserved = itemDocs.find(item => item.status !== "reserved" || (item.reservedBy && item.reservedBy.toString() !== userId));
+    const itemDocs = await Item.find({ _id: { $in: items } });
+    const notReserved = itemDocs.find(item => item.status !== "reserved" && item.reservedBy && item.reservedBy.toString() !== userId);
     if (notReserved) {
       return res.status(400).json({ success: false, message: `Item '${notReserved.name}' is not reserved for you.` });
     }
     // Do NOT mark items as sold or completed here. Only after OTP verification.
     const otpDetails = await Promise.all(
-      items.map(async (item) => {
+      itemDocs.map(async (item) => {
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
         const hashedOtp = await bcrypt.hash(otp, 10);
         return {
@@ -321,7 +321,7 @@ userRouter.post("/checkout", authenticateUser, async (req, res) => {
         };
       })
     );
-    console.log("Order created for:", userId, "with items:", items);
+    console.log("Order created for:", userId, "with items:", itemDocs.map(i => i._id));
     await Order.create({
       userId,
       items: otpDetails.map((item) => ({
@@ -331,10 +331,10 @@ userRouter.post("/checkout", authenticateUser, async (req, res) => {
         otpExpiration: item.otpExpiration,
         status: item.status, // Always 'Pending' at checkout
       })),
-      amount: items.reduce((acc, item) => acc + item.price, 0),
+      amount: itemDocs.reduce((acc, item) => acc + item.price, 0),
     });
     // PATCH: Mark items as reserved after checkout
-    await Promise.all(items.map(item =>
+    await Promise.all(itemDocs.map(item =>
       Item.findByIdAndUpdate(item._id, {
         status: "reserved",
         reservedBy: userId,
@@ -342,7 +342,7 @@ userRouter.post("/checkout", authenticateUser, async (req, res) => {
       })
     ));
     await User.findByIdAndUpdate(userId, {
-      $pull: { cart: { $in: items.map((item) => item._id) } },
+      $pull: { cart: { $in: itemDocs.map((item) => item._id) } },
     });
     res.status(201).json({
       success: true,
