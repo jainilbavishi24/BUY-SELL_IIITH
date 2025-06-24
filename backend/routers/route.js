@@ -36,7 +36,7 @@ router.get("/search", async (req, res) => {
     try {
       const { query, categories } = req.query;
 
-      let filter = { status: "available" };
+      let filter = { status: "available", isActive: true };
 
       if (query) {
         filter.name = { $regex: query, $options: "i" };
@@ -58,7 +58,7 @@ router.get("/search", async (req, res) => {
 router.get("/", async (req, res) => {
     try {
         const { categories } = req.query;
-        let filter = {status: "available"};
+        let filter = {status: "available", isActive: true};
         if (categories) {
             filter.category = { $in: categories.split(",") };
         }

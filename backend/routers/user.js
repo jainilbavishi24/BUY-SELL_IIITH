@@ -724,29 +724,6 @@ userRouter.post("/:orderId/regenerate-otp", async (req, res) => {
   }
 });
 
-userRouter.post("/:orderId/complete", authenticateUser, async (req, res) => {
-  const { orderId } = req.params;
-  const { otp } = req.body;
-
-  try {
-    const order = await Order.findById(orderId);
-    if (!order) {
-      return res.status(404).json({ success: false, message: "Order not found." });
-    }
-
-    const isMatch = await bcrypt.compare(otp, order.hashedOTP);
-    if (!isMatch) {
-      return res.status(400).json({ success: false, message: "Invalid OTP" });
-    }
-
-    order.status = "completed";
-    await order.save();
-    res.json({ success: true, message: "Order completed successfully" });
-  } catch (error) {
-    res.status(500).json({ message: "Server error" });
-  }
-});
-
 // Expire pending order items with expired OTPs and re-list items
 userRouter.post("/expire-pending", async (req, res) => {
   try {
